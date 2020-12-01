@@ -1,8 +1,8 @@
-# Alma for RISC-V Software Masking
+# Alma: Execution-aware Masking Verification
 
-Alma is an _execution aware_ tool for formal verification of masked implementations.
+Alma is an _execution-aware_ tool for formal verification of masked implementations.
 In principle, Alma can verify any data-independent masked computation that can be 
-implemented as a verilog hardware circuit, with properly labeled secret shares and 
+implemented as a Verilog hardware circuit, with properly labeled secret shares and 
 masks. However, as of now, the focus of Alma is to verify software executions on a
 hardware level. This is also the focus of the related paper [COCO](https://eprint.iacr.org/2020/1294.pdf).
 
@@ -105,7 +105,7 @@ The arguments for the standard mode of operation are:
 
 Special arguments include:
   * `--cycles`: The verification process will run until the end of the VCD trace per default (-1). In case it should abort earlier, this option can be used.
-  * `--order`: Verification order, ie the number of probes. Default: 1
+  * `--order`: Verification order, i.e., the number of probes. Default: 1
   * `--mode`: Verification can be done for the stable or transient case. Default: stable
   * `--rst-name`: Verification will start after the circuit reset is over. This is the name of the reset signal. Default: `rst_i`
   * `--rst-cycles`: Duration of the system reset in cycles. Default: 2
