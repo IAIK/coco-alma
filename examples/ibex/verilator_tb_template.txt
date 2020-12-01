@@ -1,0 +1,15 @@
+#include "Vcircuit.h"
+#include "testbench_ibex.h"
+#include "ram_init.h"
+
+int main(int argc, char **argv) 
+{
+	Verilated::commandArgs(argc, argv);
+	Testbench<Vcircuit> *tb = new Testbench<Vcircuit>();
+    tb->opentrace("{VCD_PATH}");
+
+    load_prog(tb);
+
+    for(uint32_t i = 0; i < 4000; i++) tb->tick();
+    tb->closetrace();
+}

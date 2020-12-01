@@ -1,0 +1,5 @@
+dev
+__pycache__
+.idea
+tmp/*
+!tmp/.keep
