@@ -50,6 +50,8 @@ class CircuitGraph:
             mux_ins = None
             if cell_type == MUX_TYPE:
                 select = connections.pop("S")[0]
+                if type(select) == str:
+                    select = CONST_TO_BIT[select]
             clock = None
             if cell_type in REGISTER_TYPES:
                 clock = connections.pop("C")[0]
@@ -79,6 +81,7 @@ class CircuitGraph:
 
         # Create all connections
         for cell_bit in self.graph.nodes():
+            # print(cell_bit, ", ".join(["%d %d" % (n, n in self.graph.nodes()) for n in wires[cell_bit]]))
             assert(all([n in self.graph.nodes() for n in wires[cell_bit]]))
             for in_wire in wires[cell_bit]:
                 self.graph.add_edge(in_wire, cell_bit)
