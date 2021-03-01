@@ -1,4 +1,4 @@
-# IBEX masking verification
+# Hardware masking verification
 
 This directory contains a short tutorial on how to verify a TI-masked implementation of the PRINCE cipher.
 It should work out-of-the-box with the provided testbench. If you encounter any problems, feel free to open an issue.
