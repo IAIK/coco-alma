@@ -103,7 +103,7 @@ def trace_verilator(args):
     if not(args.skip_compile_netlist):
         print("1: Running verilator on given netlist")
         
-        verilator_cmd = [VERILATOR, "--trace", "--trace-underscore", "--compiler", args.c_compiler, "-Wno-UNOPTFLAT", "-cc", args.netlist_file_path]
+        verilator_cmd = [VERILATOR, "--trace", "--trace-underscore", "--compiler", args.c_compiler, "-Wno-UNOPTFLAT", "-Wno-LITENDIAN", "-cc", args.netlist_file_path]
 
         check_run(verilator_cmd, "ERROR: Running verilator failed.")
 

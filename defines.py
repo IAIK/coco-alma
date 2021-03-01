@@ -46,11 +46,15 @@ UINT_MAX = 0xffffffffff
 TRANSIENT = "transient"
 STABLE = "stable"
 
+ONCE = "once"
+ALWAYS = "always"
+
 # define label types
 LABEL_SHARE = "share"
 LABEL_MASK = "mask"
+LABEL_RANDOM = "random"
 LABEL_OTHER = "unimportant"
-LABEL_TYPES = (LABEL_SHARE, LABEL_MASK, LABEL_OTHER)
+LABEL_TYPES = (LABEL_SHARE, LABEL_MASK, LABEL_RANDOM, LABEL_OTHER)
 
 # directory defines
 ALMA_DIR = os.path.dirname(os.path.realpath(__file__))

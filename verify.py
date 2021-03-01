@@ -33,6 +33,12 @@ def parse_arguments():
     parser.add_argument("-m", "--mode", dest="mode",
                         required=False, default=STABLE, choices=[STABLE, TRANSIENT],
                         help="The verification mode (default: %(default)s)")
+    parser.add_argument("-t", "--probe-duration", dest="probe_duration",
+                        required=False, default=ONCE, choices=[ONCE, ALWAYS],
+                        help="Specifies how a probe records values")
+    parser.add_argument("-x", "--trace-stable", action="store_true", dest="trace_stable",
+                        help="Should trace signals be assumed stable")
+    parser.set_defaults(trace_stable=False)
     parser.add_argument("-n", "--num-leaks", dest="num_leaks",
                         required=False, type=int, default=1,
                         help="Number of leakage locations to be reported if the circuit is insecure. (default: %(default)s)")
@@ -72,8 +78,8 @@ def generate_labeling(label_file_path):
         signal_label = signal_label.strip().split()
         label_type = signal_label[0]
         assert(label_type in LABEL_TYPES)
-        assert(label_type not in (LABEL_MASK, LABEL_OTHER) or len(signal_label) == 1)
-        assert(label_type != LABEL_SHARE or len(signal_label) == 2)
+        assert((label_type in (LABEL_MASK, LABEL_RANDOM, LABEL_OTHER) and len(signal_label) == 1) or
+               (label_type == LABEL_SHARE and len(signal_label) == 2))
         share_num = int(signal_label[1]) if label_type == LABEL_SHARE else None
         label_dict[signal_id] = Label(signal_id, label_type, share_num)
     return label_dict
