@@ -18,7 +18,7 @@ for d in data:
     if off != None:
         res = ":".join(ds[:-1]) + ": share " + str(int(ds[1]) + off)
     elif ds[0] == "i_r":
-        res = ":".join(ds[:-1]) + ": mask"
+        res = ":".join(ds[:-1]) + ": random"
     data_.append(res)
         
 with open(sys.argv[2], "w+") as f:

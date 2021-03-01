@@ -107,6 +107,8 @@ Special arguments include:
   * `--cycles`: The verification process will run until the end of the VCD trace per default (-1). In case it should abort earlier, this option can be used.
   * `--order`: Verification order, i.e., the number of probes. Default: 1
   * `--mode`: Verification can be done for the stable or transient case. Default: stable
+  * `--probe-duration`: Specifies how a long probe records values. Default: once
+  * `--trace-stable`: If specified, trace signals are assumed to be stable
   * `--rst-name`: Verification will start after the circuit reset is over. This is the name of the reset signal. Default: `rst_i`
   * `--rst-cycles`: Duration of the system reset in cycles. Default: 2
   * `--rst-phase`: Value of the reset signal which triggers the reset. Default: 1

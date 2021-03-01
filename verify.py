@@ -35,7 +35,7 @@ def parse_arguments():
                         help="The verification mode (default: %(default)s)")
     parser.add_argument("-t", "--probe-duration", dest="probe_duration",
                         required=False, default=ONCE, choices=[ONCE, ALWAYS],
-                        help="Specifies how a probe records values")
+                        help="Specifies how a probe records values (default: %(default)s)")
     parser.add_argument("-x", "--trace-stable", action="store_true", dest="trace_stable",
                         help="Should trace signals be assumed stable")
     parser.set_defaults(trace_stable=False)
