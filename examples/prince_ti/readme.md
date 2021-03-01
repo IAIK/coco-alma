@@ -38,7 +38,7 @@ python3 generate_labels.py path_to/coco-alma/tmp/labels.txt path_to/my-labels.tx
 ```bash
 python3 verify.py \
     --json path_to/coco-alma/tmp/circuit.json \
-    --label path_to/coco-alma/my-labels.txt \
+    --label path_to/my-labels.txt \
     --vcd path_to/vcd-file-location.vcd \
     --cycles 3 \
     --mode transient \
