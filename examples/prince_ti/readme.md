@@ -14,6 +14,8 @@ The verification flow is mostly the same as described in the root directory. How
 you need to perform before you can trace the execution of the circuit. In the following, we only briefly describe
 the main steps.
 
+For a simplified procedure, without any custom settings, please run `run_pipeline.py` from the virtual environment. The provided pipeline executes all the steps every time although it might not be necessary, so you can adapt it or write your own! For manual execution, please follow the following steps:
+
 * Synthesise the `top_module_d11` circuit, which is the top module of the PRINCE-TI design. The example saves the netlist in the coco-alma temporary directory.
 ```bash
 python3 path_to/coco-alma/parse.py --log-yosys \
@@ -41,7 +43,8 @@ python3 verify.py \
     --cycles 3 \
     --mode transient \
     --rst-name i_reset \
-    --trace-stable
+    --trace-stable \
+    --probe-duration always
 ```
 
 You can customize most of the artefact file locations generated during this process and then need to
