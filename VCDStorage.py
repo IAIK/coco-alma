@@ -21,7 +21,7 @@ class VCDStorage:
         self.previous_values = {}  # key: vcd_id, value: previous value
         self.vcd_file = open(vcd_file_path, "r")
         self.cycle = 0
-        self.factor = 0
+        self.factor = 1
         self.parse_header()
 
     def __del__(self):
