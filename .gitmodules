@@ -1,0 +1,3 @@
+[submodule "examples/aes_dom/design"]
+	path = examples/aes_dom/design
+	url = https://github.com/vedadux/aes-dom.git

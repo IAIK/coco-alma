@@ -21,7 +21,7 @@ class VCDStorage:
         self.previous_values = {}  # key: vcd_id, value: previous value
         self.vcd_file = open(vcd_file_path, "r")
         self.cycle = 0
-        self.factor = 1
+        self.timestamps = []
         self.parse_header()
 
     def __del__(self):
@@ -38,9 +38,6 @@ class VCDStorage:
         fill = "x" if "x" in signal_value else "0"
         signal_value = signal_value.rjust(self.id_to_width[signal_id], fill)
         return signal_value, signal_id
-
-    def is_new_cycle(self):
-        pos = self.vcd_file.tell()
 
     def parse_header(self):
         while True:
@@ -67,10 +64,6 @@ class VCDStorage:
                 num, unit = int(line[1][:-2]), line[1][-2:]
                 assert (num == 1), "Unsupported timescale factor"
                 assert (unit in ["ps", "ns"]), "Unsupported timescale unit"
-                if unit == "ps":
-                    self.factor = 1000 * 10
-                elif unit == "ns":
-                    self.factor = 10
             else:
                 raise Exception("Detected unknown VCD header line: %s." % (line[0]))
         while peek_line(self.vcd_file)[0] != "#":
@@ -86,10 +79,11 @@ class VCDStorage:
         for line in self.vcd_file:
             line = line.strip()
             if line.startswith("#"):
-                timestamp = int(line.replace("#", ""))
-                assert(timestamp % self.factor == 0)
-                timestamp = timestamp // self.factor
-                if timestamp % 2 == 0:
+                ts = int(line.replace("#", ""))
+                assert(len(self.timestamps) < 2 or
+                       self.timestamps[-1] - self.timestamps[-2] == ts - self.timestamps[-1])
+                self.timestamps.append(ts)
+                if len(self.timestamps) % 2 == 1:
                     return True
             else:
                 signal_value, signal_id = self.parse_signal(line)
@@ -104,4 +98,5 @@ class VCDStorage:
         # signal_value = values[self.name_to_id[signal_name]]
         # assert(bit_num >= 0 and bit_num < len(signal_value)), (signal_name, bit_num)
         # return signal_value[-1 - bit_num]
+        if signal_name not in self.name_to_id: return "0"
         return values[self.name_to_id[signal_name]][-1 - bit_num]
