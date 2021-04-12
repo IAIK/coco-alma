@@ -32,7 +32,8 @@ docker pull hdlc/ghdl:yosys
 python3 synth.py
 ```
   The synthesis script merely automates the whole process. It prepares a custom synthesis script, runs it using the Yosys from the docker image.
-  This produces a flattened verilog netlist, which you just re-synthesize with `parse.py`. The example below, saves all the data into coco-alma's temporary directory.
+  This produces a flattened verilog netlist. Since the AES-DOM implementation is pipelined and only gets one plaintext and key share per cycle, we provide an additional wrapper that expects the whole plaintext and key simultaneously.
+  We synthesize this `aes_dom_wrapper.v` together with the main circuit using `parse.py`. The example below, saves all the data into coco-alma's temporary directory.
 ```bash
 python3 path_to/coco-alma/parse.py --log-yosys \
     --top-module aes_top \

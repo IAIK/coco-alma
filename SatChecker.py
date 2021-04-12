@@ -165,8 +165,8 @@ class Formula:
 
     def model_for_vars(self, model, vars_id):
         props = self.prop_var_sets[vars_id]
-        l = [((x in model) & 1) if type(x) == int else int(x) for x in props.tuple()]
-        return tuple(l)
+        l = tuple(((x in model) & 1) if type(x) == int else int(x) for x in props.tuple())
+        return l
 
     def __backtrack_fault(self, model, location, mode):
         node_vars = [self.node_vars_stable, self.node_vars_trans][(mode == TRANSIENT) & 1]
@@ -237,7 +237,7 @@ class SatChecker(object):
     def __init__(self, labels, trace, args):
         assert(args.mode in (TRANSIENT, STABLE))
 
-        with open(TMP_DIR + "/safe_graph.pickle",'rb') as f:
+        with open(TMP_DIR + "/safe_graph.pickle", 'rb') as f:
             self.circuit = pickle.load(f)
 
         assert(args.probe_duration != ALWAYS or args.cycles != UINT_MAX)
@@ -245,6 +245,7 @@ class SatChecker(object):
         self.trace = trace
         self.order = args.order
         self.cycles = args.cycles
+        self.from_cycle = args.from_cycle
         self.mode = args.mode
         self.probe_duration = args.probe_duration
         self.trace_stable = args.trace_stable
@@ -252,11 +253,13 @@ class SatChecker(object):
         self.rst_cycles = args.rst_cycles
         self.rst_phase = args.rst_phase
         self.num_leaks = args.num_leaks
+        self.minimize_leaks = args.minimize_leaks
         self.dbg_output_dir_path = args.dbg_output_dir_path
         self.masks = []
         self.randoms = []
         self.shares = {}
         self.variables = []
+        self.var_indexes = {}
         self.pretty_names = []
         self.__extract_label_info(labels)
         self.num_vars = len(self.variables) + (self.cycles * len(self.randoms))
@@ -278,6 +281,7 @@ class SatChecker(object):
                     self.shares[label.num] = []
                 self.pretty_names.append("s%d:%d" % (label.num, len(self.shares[label.num])))
                 self.shares[label.num].append(label.bit)
+            self.var_indexes[label.bit] = len(self.variables)
             self.variables.append(label.bit)
         pnames = []
         for label_id in labels.keys():
@@ -288,6 +292,8 @@ class SatChecker(object):
         if len(self.randoms) == 0: return
         for i in range(self.cycles):
             self.pretty_names += ["%s:%d" % (p, i) for p in pnames]
+            for idx, r in enumerate(self.randoms):
+                self.var_indexes[(r, i)] = len(self.variables) + i * len(self.randoms) + idx
 
     # @profile
     def __simple_inherit(self, type_, preds, curr_vars, info):
@@ -538,8 +544,8 @@ class SatChecker(object):
             cycle += 1
         #self.formula.solver.dbg_print()
         self.formula.collect_active(self.mode, self.probe_duration)
-        self.__make_checks()
-        self.formula.make_assumes(self.shares)
+        # self.__make_checks()
+        # self.formula.make_assumes(self.shares)
 
     def __get_assumes(self, ss):
         assumes = [self.formula.check_vars[share] for share in self.shares[ss]]
@@ -600,10 +606,11 @@ class SatChecker(object):
             pass
 
         cells = [self.circuit.cells[x] for x in self.variables]
-        initial = ["%s:%s" % (c.name, c.pos) for c in cells]
+        initial = ["%s[%s]" % (c.name, c.pos) for c in cells]
 
         for name, init in zip(self.pretty_names, initial):
             dbg.write("%s = %s\n" % (name, init))
+
         # print debug label info
         for cycle in range(last + 1):
             stable = self.formula.node_vars_stable[cycle]
@@ -615,9 +622,9 @@ class SatChecker(object):
                 for mode, mstr in zip((stable, trans), ("stable", "trans ")):
                     if mode is None or node_id not in mode: continue
                     res = self.formula.model_for_vars(model, mode[node_id])
-                    line = " ; ".join(["%s=%d" % (n, v) for n, v in zip(self.pretty_names, res) if v == 1])
-                    vars = "%s" % (self.formula.prop_var_sets[mode[node_id]])
-                    line = " %s | %s" % (line, vars)
+                    line = " ; ".join(["%s" % n for n, v in zip(self.pretty_names, res) if v == 1])
+                    # vars = "%s" % (self.formula.prop_var_sets[mode[node_id]])
+                    # line = " %s | %s" % (line, vars)
                     dbg.write("%4d %s %20s: %s\n" % (cycle, mstr, cell, line))
         if dbg != sys.stdout: dbg.close()
 
@@ -683,22 +690,97 @@ class SatChecker(object):
         for r in self.randoms:
             for cyc in range(self.cycles):
                 rand_masks.append((r, cyc))
-        for m in self.masks + rand_masks:
-            prop = self.formula.check_vars.get(m)
-            if prop is None:
-                print("%s not found" % m)
-                continue
-            self.formula.solver.add_clause([-prop])
+        all_masks = self.masks + rand_masks
+        start_time = time.time()
+        old_assumes = []
+        leaks = []
+        for vars_id in self.formula.active:
+            act_info = self.formula.active[vars_id]
+            if act_info.cycle < self.from_cycle: continue
+            probe_time = time.time()
+            pvs = self.formula.prop_var_sets[vars_id]
+            cell = self.circuit.cells[act_info.cell_id]
+            mask_assumes = {pvs[self.var_indexes[m]] for m in all_masks}
+            if "1" in mask_assumes: continue
+            mask_assumes = [-x for x in mask_assumes if type(x) != str]
 
-        check_fmt = "Checking secret %%%dd %%s: " % len(str(len(self.shares)))
-        for ss in sorted(list(self.shares.keys())):
-            assumes = self.__get_assumes(ss)
-            print(check_fmt % (ss, assumes[:self.order + 1]))
+            act_assumes = {}
+            positive = []
+            trivial = False
+            next_old = []
+            for ss in sorted(list(self.shares.keys())):
+                # print(ss, self.shares[ss], [self.var_indexes[s] for s in self.shares[ss]])
+                vs = {pvs[self.var_indexes[s]] for s in self.shares[ss]}
+                # print(pvs, vs)
+                found_0 = "0" in vs
+                found_1 = "1" in vs
+                vs = {v for v in vs if type(v) != str}
+                if found_0 and found_1:
+                    trivial = True
+                    break
+                if len(vs) == 0: continue
+
+                pos, neg = None, None
+                if len(vs) == 1:
+                    pos = vs.pop()
+                    neg = -pos
+                else:
+                    pos = self.formula.solver.get_var()
+                    neg = self.formula.solver.get_var()
+
+                    cls = make_and_bool(vs, pos) + make_and_bool([-x for x in vs], neg)
+                    self.formula.solver.add_clauses(cls)
+                act = None
+                if found_0:
+                    act = neg
+                elif found_1:
+                    act = pos
+                else:
+                    act = self.formula.solver.get_var()
+                    self.formula.solver.add_clause([-act, pos, neg])
+                    next_old.append(-act)
+                act_assumes[ss] = act
+                if not found_0:
+                    positive.append(pos)
+
+            if trivial or len(positive) == 0: continue
+            act_assumes = list(act_assumes.values())
+            pos = self.formula.solver.get_var()
+            self.formula.solver.add_clauses(make_or_bool(positive, pos))
+
+            assumes = mask_assumes + [pos] + act_assumes + old_assumes
+            old_assumes += next_old
+            # print(old_assumes)
+            # print(assumes)
+            print("Checking probe %d %d %s: " % (vars_id, act_info.cycle, cell), end="")
+            sys.stdout.flush()
             r = self.formula.solver.solve(assumes)
-            if not r: continue
-            location = self.formula.analyse(assumes, self.num_leaks, self.mode)
-            for i, loc in enumerate(location):
-                model, acts = loc
-                self.__dbg_state(i, model, acts)
-            return False, location
-        return True, []
+            if not r:
+                end_time = time.time()
+                print("%6.2f %6.2f" % ((end_time - probe_time), (end_time - start_time)))
+                continue
+            print("leak")
+
+            model = set(self.formula.solver.get_model())
+            if self.minimize_leaks:
+                opt_assumes = []
+                can_assumes = []
+                for p in positive:
+                    if p not in model: opt_assumes.append(-p)
+                    else:              can_assumes.append(p)
+
+                while len(can_assumes):
+                    c = can_assumes.pop()
+                    r = self.formula.solver.solve(assumes + opt_assumes + [-c])
+                    if not r: continue
+                    opt_assumes.append(-c)
+
+                r = self.formula.solver.solve(assumes + opt_assumes)
+                assert(r)
+                model = set(self.formula.solver.get_model())
+            leaks.append((model, [VariableInfo(act_info.cycle, act_info.cell_id)]))
+            if len(leaks) >= self.num_leaks: break
+        for i, loc in enumerate(leaks):
+            model, acts = loc
+            self.__dbg_state(i, model, acts)
+        return len(leaks) == 0, leaks

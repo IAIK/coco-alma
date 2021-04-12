@@ -99,4 +99,6 @@ class VCDStorage:
         # assert(bit_num >= 0 and bit_num < len(signal_value)), (signal_name, bit_num)
         # return signal_value[-1 - bit_num]
         if signal_name not in self.name_to_id: return "0"
-        return values[self.name_to_id[signal_name]][-1 - bit_num]
+        full_val = values[self.name_to_id[signal_name]]
+        if bit_num is None: return full_val
+        return full_val[-1 - bit_num]

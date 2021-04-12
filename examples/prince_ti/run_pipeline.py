@@ -67,9 +67,10 @@ python3 %s/verify.py
     --rst-name i_reset 
     --cycles 3 
     --mode transient 
-    --probe-duration always
-    --trace-stable 
+    --probe-duration once 
+    --num-leaks 1
 """ % (ALMA_DIR, TMP_DIR, TMP_DIR)
+# --trace-stable
 
 print(verify)
 res = sp.call(verify.split())

@@ -4,9 +4,10 @@ import helpers
 
 
 class Solver(Cadical):
-    def __init__(self, store_clauses=True, store_comments=False):
+    def __init__(self, store_clauses=False, store_comments=False):
         Cadical.__init__(self)
         self.__var = 1
+        self.clock_act = None
         self.__dbg_clauses = []
         self.__dbg_comments = {}
         self.num_clauses = 0
@@ -50,7 +51,9 @@ class Solver(Cadical):
         if self.store_clauses:
             self.__dbg_clauses.append(clause)
         self.num_clauses += 1
-        Cadical.add_clause(self, clause, no_return)
+        cl = clause.copy()
+        if self.clock_act is not None: cl.append(-self.clock_act)
+        Cadical.add_clause(self, cl, no_return)
 
     def add_clauses(self, clauses):
         for clause in clauses:

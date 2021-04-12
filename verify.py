@@ -27,6 +27,9 @@ def parse_arguments():
     parser.add_argument("-c", "--cycles", dest="cycles",
                         required=False, type=int, default=-1,
                         help="Number of cycles to verify (default: %(default)s; stop when VCD file ends)")
+    parser.add_argument("-f", "--from-cycle", dest="from_cycle",
+                        required=False, type=int, default=0,
+                        help="Start of verification after reset (default: %(default)s)")
     parser.add_argument("-q", "--order", dest="order",
                         required=False, type=helpers.ap_check_positive, default=1,
                         help="Verification order, ie the number of probes (default: %(default)s)")
@@ -39,6 +42,9 @@ def parse_arguments():
     parser.add_argument("-x", "--trace-stable", action="store_true", dest="trace_stable",
                         help="Should trace signals be assumed stable")
     parser.set_defaults(trace_stable=False)
+    parser.add_argument("-ml", "--minimize-leaks", action="store_true", dest="minimize_leaks",
+                        help="Tells the solver to find the smallest correlating linear combination")
+    parser.set_defaults(minimize_leaks=True)
     parser.add_argument("-n", "--num-leaks", dest="num_leaks",
                         required=False, type=int, default=1,
                         help="Number of leakage locations to be reported if the circuit is insecure. (default: %(default)s)")

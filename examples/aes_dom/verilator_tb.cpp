@@ -12,6 +12,8 @@
 #define BMULSIZE (N * 4)
 #define BINVSIZE (N * 2)
 
+#define acc(ptr, i, j) (ptr + i * (N+1) + j)
+
 int main(int argc, char **argv) 
 {
 	Verilated::commandArgs(argc, argv);
@@ -25,53 +27,60 @@ int main(int argc, char **argv)
     uint8_t ect[16] = {0x68, 0x4d, 0x58, 0x3b, 0xa3, 0x24, 0x41, 0x6f, 
                        0xad, 0xe4, 0xa4, 0xa6, 0x53, 0xe8, 0x13, 0xfc};
     srand(42);
+    const int BLOCK_SIZE = 16 * (N + 1) / sizeof(WData);
+    WData masked_key[BLOCK_SIZE];
+    WData masked_pt[BLOCK_SIZE];
+    uint8_t* u8_key = (uint8_t*)masked_key;
+    uint8_t* u8_pt = (uint8_t*)masked_pt;
     
-    uint8_t key_a[16]; uint8_t key_b[16];
-    uint8_t  pt_a[16]; uint8_t  pt_b[16];
     
     for (int i = 0; i < 16; i++)
     {
-        key_a[i] = rand() & 0xff;
-        key_b[i] = key[i] ^ key_a[i];
+        *acc(u8_key, i, 0) = key[i];
+        *acc(u8_pt, i, 0) = pt[i];
         
-        pt_a[i] = rand() & 0xff;
-        pt_b[i] = pt[i] ^ pt_a[i];
+        for (int j = 1; j <= N; j++)
+        {
+            *acc(u8_key, i, j) = rand() & 0xff;
+            *acc(u8_pt, i, j) = rand() & 0xff;
+            
+            *acc(u8_key, i, 0) ^= *acc(u8_key, i, j);
+            *acc(u8_pt, i, 0) ^= *acc(u8_pt, i, j);
+        }
     }
     
     tb->reset();
-    tb->m_core->StartxSI = 1;
-    tb->tick();
-    tb->m_core->StartxSI = 0;
     
-    for (int i = 0; i < 16; i++)
+    tb->m_core->StartxSI = 1;
+    for (int i = 0; i < BLOCK_SIZE; i++)
     {
-        tb->m_core->KxDI = (key_a[i] << 8) + key_b[i];
-        tb->m_core->PTxDI = (pt_a[i] << 8) + pt_b[i];
-        tb->tick();
+        tb->m_core->KxDI[i] = masked_key[i];
+        tb->m_core->PTxDI[i] = masked_pt[i];
     }
+    tb->tick();
+    
+    tb->m_core->StartxSI = 0;
+    for (int i = 0; i < BLOCK_SIZE; i++)
+    {
+        tb->m_core->KxDI[i] = 0;
+        tb->m_core->PTxDI[i] = 0;
+    }
+    tb->tick();
     
     while (tb->m_core->DonexSO != 1 && tb->m_tickcount < 300)
     { tb->tick(); }
     
-    uint8_t ct_a[16]; uint8_t ct_b[16];
-    uint8_t rct[16];
+    WData masked_ct[BLOCK_SIZE];
+    uint8_t* u8_ct = (uint8_t*)masked_ct;
+    
+    for (int i = 0; i < BLOCK_SIZE; i++)
+        masked_ct[i] = tb->m_core->CxDO[i];
+    
+    uint8_t rct[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     
     for (int i = 0; i < 16; i++)
-    {
-        uint16_t c_ab = tb->m_core->CxDO;
-        ct_a[i] = (c_ab >> 8) & 0xff;
-        ct_b[i] = c_ab & 0xff;
-        rct[i] = ct_a[i] ^ ct_b[i];
-        tb->tick();
-    }
-    
-    printf("ct_a: ");
-    for(int i = 0; i < 16; i++) printf("%02x", ct_a[i]);
-    printf("\n");
-    
-    printf("ct_b: ");
-    for(int i = 0; i < 16; i++) printf("%02x", ct_b[i]);
-    printf("\n");
+        for (int j = 0; j <= N; j++) 
+            rct[i] ^= *acc(u8_ct, i, j);
     
     printf("rct:  ");
     for(int i = 0; i < 16; i++) printf("%02x", rct[i]);

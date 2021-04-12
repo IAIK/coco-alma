@@ -11,9 +11,9 @@ TMP_DIR = ALMA_DIR + "/tmp"
 parse = \
 """
 python3 %s/parse.py --log-yosys 
-    --top-module aes_top 
-    --source %s
-""" % (ALMA_DIR, AES_DIR + "/tmp/circuit.v")
+    --top-module aes_wrapper 
+    --source %s %s
+""" % (ALMA_DIR, AES_DIR + "/tmp/circuit.v", AES_DIR + "/aes_dom_wrapper.v")
 
 print(parse)
 res = sp.call(parse.split())
@@ -38,7 +38,6 @@ if res:
     print("Tracing failed")
     sys.exit(res)
 
-sys.exit(0)
 ##### LABELING
 
 labels = \
@@ -53,6 +52,7 @@ if res:
     print("Labeling failed")
     sys.exit(res)
 
+
 ##### VERIFICATION
 
 verify = \
@@ -61,11 +61,11 @@ python3 %s/verify.py
     --json %s/circuit.json 
     --vcd /tmp/tmp.vcd 
     --label %s/my-labels.txt 
-    --rst-name i_reset 
-    --cycles 3 
+    --rst-name RstxBI
+    --rst-phase 0
+    --cycles 26
     --mode transient 
-    --probe-duration always
-    --trace-stable 
+    --probe-duration once
 """ % (ALMA_DIR, TMP_DIR, TMP_DIR)
 
 print(verify)
