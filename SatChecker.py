@@ -24,8 +24,8 @@ class Formula:
         self.active = []             # [vars...]
         self.check_vars = {}         # labeled node -> prop
         self.assume_act = {}         # labeled node -> prop
-        self.covering_vars = {}      # vars -> {vars...}
-        self.covered_vars = set()    # {vars...}
+        self.covering_top_vars = {}  # vars -> {vars...}
+        self.covered_bot_vars = {}   # {vars...}
         self.vars_to_info = {}       # vars -> (cycle, node)
         self.solver = Solver(store_clauses=False, store_comments=True)
 
@@ -40,10 +40,12 @@ class Formula:
         return biased_vars.id
 
     def add_cover(self, top, bot):
-        if top not in self.covering_vars:
-            self.covering_vars[top] = set()
-        self.covering_vars[top].add(bot)
-        self.covered_vars.add(bot)
+        if top not in self.covering_top_vars:
+            self.covering_top_vars[top] = set()
+        self.covering_top_vars[top].add(bot)
+        if bot not in self.covered_bot_vars:
+            self.covered_bot_vars[bot] = set()
+        self.covered_bot_vars[bot].add(top)
 
     def union_gate_set(self, out, param1, param2, union=None):
         assert(out not in self.nonlin_gate_set)
@@ -153,7 +155,7 @@ class Formula:
             for node in vars.keys():
                 self.vars_to_info[vars[node]] = VariableInfo(cycle, node)
                 if vars[node] in active: continue
-                if duration == ONCE and vars[node] in self.covered_vars: continue
+                if duration == ONCE and vars[node] in self.covered_bot_vars: continue
                 active.add(vars[node])
         if duration == ONCE:
             self.active = [tuple(x) for x in sorted(active)]
@@ -161,13 +163,27 @@ class Formula:
 
         # collect vars from different clock cycles belonging to a node
         node_to_vars = {}
+        node_to_covers = {}
         for vars_id in active:
             info = self.vars_to_info[vars_id]
             if info.cell_id not in node_to_vars:
                 node_to_vars[info.cell_id] = set()
             node_to_vars[info.cell_id].add(vars_id)
+            if vars_id not in self.covered_bot_vars:
+                node_to_covers[info.cell_id] = set()
+                continue
+            covers = set()
+            for x in self.covered_bot_vars[vars_id]:
+                if x not in self.vars_to_info: continue
+                covers.add(self.vars_to_info[x].cell_id)
+            if info.cell_id not in node_to_covers:
+                node_to_covers[info.cell_id] = covers
+            else:
+                node_to_covers[info.cell_id].intersection_update(covers)
 
         for nid in node_to_vars:
+            if len(node_to_covers[nid]) != 0:
+                continue
             self.active.append(tuple(node_to_vars[nid]))
         return
 
@@ -185,7 +201,7 @@ class Formula:
             found = True
             while found:
                 vars_id = node_vars[cycle][cell_id]
-                covered = self.covering_vars.get(vars_id)
+                covered = self.covering_top_vars.get(vars_id)
                 found = False
                 if covered is not None:
                     vals = self.model_for_vars(model, vars_id)
