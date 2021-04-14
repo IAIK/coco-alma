@@ -1,3 +1,5 @@
+import itertools
+
 from defines import *
 from helpers import label_type, parity
 import time
@@ -685,6 +687,76 @@ class SatChecker(object):
         for cycle in cone.keys(): cone_nodes = cone_nodes.union(cone[cycle])
         self.__dbg_draw_dot(leak_num, cone_nodes, predecessors, location)
 
+    def get_assumes(self, pvs: PropVarSet):
+        act_assumes = []
+        positive = []
+        trivial = False
+        for ss in sorted(list(self.shares.keys())):
+            # print(ss, self.shares[ss], [self.var_indexes[s] for s in self.shares[ss]])
+            vs = {pvs[self.var_indexes[s]] for s in self.shares[ss]}
+            # print(pvs, vs)
+            found_0 = "0" in vs
+            found_1 = "1" in vs
+            vs = {v for v in vs if type(v) != str}
+            if found_0 and found_1:
+                trivial = True
+                break
+            if len(vs) == 0: continue
+
+            pos, neg = None, None
+            if len(vs) == 1:
+                pos = vs.pop()
+                neg = -pos
+            else:
+                pos = self.formula.solver.get_var()
+                neg = self.formula.solver.get_var()
+
+                cls = make_and_bool(vs, pos) + make_and_bool([-x for x in vs], neg)
+                self.formula.solver.add_clauses(cls)
+            act = None
+            if found_0:
+                act = neg
+            elif found_1:
+                act = pos
+            else:
+                act = self.formula.solver.get_var()
+                self.formula.solver.add_clause([-act, pos, neg])
+            act_assumes.append(act)
+            if not found_0:
+                positive.append(pos)
+
+        if trivial or len(positive) == 0: return None, None
+        pos = None
+        if len(positive) == 1:
+            pos = positive[0]
+        else:
+            pos = self.formula.solver.get_var()
+            self.formula.solver.add_clauses(make_or_bool(positive, pos))
+        act_assumes.append(pos)
+        return act_assumes, positive
+
+    def get_leak_model(self, assumes, positive):
+        model = set(self.formula.solver.get_model())
+        if self.minimize_leaks:
+            opt_assumes = []
+            can_assumes = []
+            for p in positive:
+                if p not in model:
+                    opt_assumes.append(-p)
+                else:
+                    can_assumes.append(p)
+
+            while len(can_assumes):
+                c = can_assumes.pop()
+                r = self.formula.solver.solve(assumes + opt_assumes + [-c])
+                if not r: continue
+                opt_assumes.append(-c)
+
+            r = self.formula.solver.solve(assumes + opt_assumes)
+            assert (r)
+            model = set(self.formula.solver.get_model())
+        return model
+
     def check(self):
         rand_masks = []
         for r in self.randoms:
@@ -692,93 +764,39 @@ class SatChecker(object):
                 rand_masks.append((r, cyc))
         all_masks = self.masks + rand_masks
         start_time = time.time()
-        old_assumes = []
         leaks = []
-        for vars_id in self.formula.active:
-            act_info = self.formula.active[vars_id]
-            if act_info.cycle < self.from_cycle: continue
+        for vars_ids in itertools.combinations(self.formula.active, self.order):
+            act_infos = [self.formula.active[vid] for vid in vars_ids]
+
+            if all(map(lambda x: x.cycle < self.from_cycle, act_infos)): continue
             probe_time = time.time()
-            pvs = self.formula.prop_var_sets[vars_id]
-            cell = self.circuit.cells[act_info.cell_id]
+            cells = [self.circuit.cells[ai.cell_id] for ai in act_infos]
+            all_pvs = [self.formula.prop_var_sets[vid] for vid in vars_ids]
+            pvs = all_pvs[0]
+            for pvs_ in all_pvs[1:]:
+                pvs = PropVarSet(xor=(pvs, pvs_), solver=self.formula.solver)
+
             mask_assumes = {pvs[self.var_indexes[m]] for m in all_masks}
+            # trivial case, a mask is always active
             if "1" in mask_assumes: continue
             mask_assumes = [-x for x in mask_assumes if type(x) != str]
 
-            act_assumes = {}
-            positive = []
-            trivial = False
-            next_old = []
-            for ss in sorted(list(self.shares.keys())):
-                # print(ss, self.shares[ss], [self.var_indexes[s] for s in self.shares[ss]])
-                vs = {pvs[self.var_indexes[s]] for s in self.shares[ss]}
-                # print(pvs, vs)
-                found_0 = "0" in vs
-                found_1 = "1" in vs
-                vs = {v for v in vs if type(v) != str}
-                if found_0 and found_1:
-                    trivial = True
-                    break
-                if len(vs) == 0: continue
+            act_assumes, positive = self.get_assumes(pvs)
+            # trivial case, no complete secrets
+            if act_assumes is None: continue
 
-                pos, neg = None, None
-                if len(vs) == 1:
-                    pos = vs.pop()
-                    neg = -pos
-                else:
-                    pos = self.formula.solver.get_var()
-                    neg = self.formula.solver.get_var()
+            assumes = mask_assumes + act_assumes
 
-                    cls = make_and_bool(vs, pos) + make_and_bool([-x for x in vs], neg)
-                    self.formula.solver.add_clauses(cls)
-                act = None
-                if found_0:
-                    act = neg
-                elif found_1:
-                    act = pos
-                else:
-                    act = self.formula.solver.get_var()
-                    self.formula.solver.add_clause([-act, pos, neg])
-                    next_old.append(-act)
-                act_assumes[ss] = act
-                if not found_0:
-                    positive.append(pos)
-
-            if trivial or len(positive) == 0: continue
-            act_assumes = list(act_assumes.values())
-            pos = self.formula.solver.get_var()
-            self.formula.solver.add_clauses(make_or_bool(positive, pos))
-
-            assumes = mask_assumes + [pos] + act_assumes + old_assumes
-            old_assumes += next_old
-            # print(old_assumes)
-            # print(assumes)
-            print("Checking probe %d %d %s: " % (vars_id, act_info.cycle, cell), end="")
+            print("Checking probe %s: " % act_infos, end="")
             sys.stdout.flush()
             r = self.formula.solver.solve(assumes)
-            if not r:
-                end_time = time.time()
-                print("%6.2f %6.2f" % ((end_time - probe_time), (end_time - start_time)))
-                continue
+            end_time = time.time()
+            print("%6.2f %6.2f" % ((end_time - probe_time), (end_time - start_time)))
+            if not r: continue
             print("leak")
 
-            model = set(self.formula.solver.get_model())
-            if self.minimize_leaks:
-                opt_assumes = []
-                can_assumes = []
-                for p in positive:
-                    if p not in model: opt_assumes.append(-p)
-                    else:              can_assumes.append(p)
-
-                while len(can_assumes):
-                    c = can_assumes.pop()
-                    r = self.formula.solver.solve(assumes + opt_assumes + [-c])
-                    if not r: continue
-                    opt_assumes.append(-c)
-
-                r = self.formula.solver.solve(assumes + opt_assumes)
-                assert(r)
-                model = set(self.formula.solver.get_model())
-            leaks.append((model, [VariableInfo(act_info.cycle, act_info.cell_id)]))
+            model = self.get_leak_model(assumes, positive)
+            leaks.append((model, [VariableInfo(ai.cycle, ai.cell_id) for ai in act_infos]))
             if len(leaks) >= self.num_leaks: break
         for i, loc in enumerate(leaks):
             model, acts = loc
