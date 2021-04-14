@@ -21,7 +21,7 @@ class Formula:
         self.nonlin_set_cache = {}   # (vars...) -> vars
         self.biased_cache = set()    # {vars...}
         self.biased_vars = set()     # {vars...}
-        self.active = {}             # vars -> (cycle, node, prop)
+        self.active = []             # [vars...]
         self.check_vars = {}         # labeled node -> prop
         self.assume_act = {}         # labeled node -> prop
         self.covering_vars = {}      # vars -> {vars...}
@@ -146,14 +146,30 @@ class Formula:
                 self.linear_set_cache[(gate_vars.id,)] = gate_vars.id
         return gate_vars.id
 
-    def collect_active(self, mode, duration):
+    def collect_active(self, mode, cycles, duration):
         node_vars = [self.node_vars_stable, self.node_vars_trans][(mode == TRANSIENT) & 1]
+        active = set()
         for cycle, vars in enumerate(node_vars):
             for node in vars.keys():
                 self.vars_to_info[vars[node]] = VariableInfo(cycle, node)
-                if vars[node] in self.active.keys(): continue
+                if vars[node] in active: continue
                 if duration == ONCE and vars[node] in self.covered_vars: continue
-                self.active[vars[node]] = ActiveInfo(cycle, node, self.solver.get_var())
+                active.add(vars[node])
+        if duration == ONCE:
+            self.active = [tuple(x) for x in sorted(active)]
+            return
+
+        # collect vars from different clock cycles belonging to a node
+        node_to_vars = {}
+        for vars_id in active:
+            info = self.vars_to_info[vars_id]
+            if info.cell_id not in node_to_vars:
+                node_to_vars[info.cell_id] = set()
+            node_to_vars[info.cell_id].add(vars_id)
+
+        for nid in node_to_vars:
+            self.active.append(tuple(node_to_vars[nid]))
+        return
 
     def make_assumes(self, shares):
         assert(len(self.assume_act) == 0)
@@ -195,43 +211,6 @@ class Formula:
                             # print("reduction to (%d %d)" % (cycle, cell_id))
                             break
             result.append(VariableInfo(cycle, cell_id))
-        return result
-
-    def analyse(self, assumes, num_leaks, mode):
-        fault = []
-        res = True
-        cache = set()
-        enable = self.solver.get_var()
-        last = -1
-        while res:
-            fault.clear()
-            model = set(self.solver.get_model())
-            for act in self.active.values():
-                if act.prop_var in model:
-                    fault.append(act)
-            last = max(map(lambda x: x.cycle, fault))
-            # forbid all cycles >= last
-            for act in self.active.values():
-                if act.prop_var in cache or act.cycle < last: continue
-                self.solver.add_clause([-enable, -act.prop_var])
-                cache.add(act.prop_var)
-            res = self.solver.solve(assumes + [enable])
-        assert(last >= 0)
-        # add a new enable for > last cycle
-        restrict = self.solver.get_var()
-        for act in self.active.values():
-            if act.cycle <= last: continue
-            self.solver.add_clause([-restrict, -act.prop_var])
-        result = []  # list of (model, list act)
-        seen = []
-        for i in range(num_leaks):
-            res = self.solver.solve(assumes + [-enable, restrict] + seen)
-            if not res: break
-            model = set(self.solver.get_model())
-            fault = list(filter(lambda x: x.prop_var in model, self.active.values()))
-            fault_min = self.__backtrack_fault(model, fault, mode)
-            result.append((model, fault_min))
-            seen += [-act.prop_var for act in fault]
         return result
 
 
@@ -457,6 +436,7 @@ class SatChecker(object):
 
             if nvars is not None: curr_vars[node_id] = nvars
 
+    """
     def __make_checks(self):
         assert(len(self.formula.check_vars) == 0)
         # keys is just used to keep the order consistent
@@ -500,6 +480,7 @@ class SatChecker(object):
                     ands.append(c)
             if len(ands) >= 1:
                 self.formula.check_vars[var] = self.formula.solver.xor_list(ands)
+    """
 
     def __init_propvarset(self, var_idx, var):
         gate_vars = PropVarSet(num=self.num_vars)
@@ -545,7 +526,7 @@ class SatChecker(object):
                 self.__build_trans()
             cycle += 1
         #self.formula.solver.dbg_print()
-        self.formula.collect_active(self.mode, self.probe_duration)
+        self.formula.collect_active(self.mode, self.cycles, self.probe_duration)
         # self.__make_checks()
         # self.formula.make_assumes(self.shares)
 
@@ -766,16 +747,18 @@ class SatChecker(object):
         start_time = time.time()
         leaks = []
         for vars_ids in itertools.combinations(self.formula.active, self.order):
-            act_infos = [self.formula.active[vid] for vid in vars_ids]
+            all_ids = tuple(set(sum(vars_ids, tuple())))
+            var_infos = [self.formula.vars_to_info[vid] for vid in all_ids]
 
-            if all(map(lambda x: x.cycle < self.from_cycle, act_infos)): continue
+            if all(map(lambda x: x.cycle < self.from_cycle, var_infos)): continue
             probe_time = time.time()
-            cells = [self.circuit.cells[ai.cell_id] for ai in act_infos]
-            all_pvs = [self.formula.prop_var_sets[vid] for vid in vars_ids]
-            pvs = all_pvs[0]
-            for pvs_ in all_pvs[1:]:
-                pvs = PropVarSet(xor=(pvs, pvs_), solver=self.formula.solver)
 
+            pvs_id = all_ids[0]
+            for pvs_id_ in all_ids[1:]:
+                pvs_id = self.formula.make_simple(AND_TYPE, pvs_id, pvs_id_)
+                assert(pvs_id is not None)
+
+            pvs = self.formula.prop_var_sets[pvs_id]
             mask_assumes = {pvs[self.var_indexes[m]] for m in all_masks}
             # trivial case, a mask is always active
             if "1" in mask_assumes: continue
@@ -786,17 +769,23 @@ class SatChecker(object):
             if act_assumes is None: continue
 
             assumes = mask_assumes + act_assumes
-
-            print("Checking probe %s: " % act_infos, end="")
+            if self.probe_duration == ONCE:
+                cells = [self.circuit.cells[ai.cell_id] for ai in var_infos]
+                fmt_list = ["(cycle %d, %s)" % (vi.cycle, c) for vi,c in zip(var_infos, cells)]
+            else:
+                cell_ids = set(ai.cell_id for ai in var_infos)
+                cells = [self.circuit.cells[cid] for cid in cell_ids]
+                fmt_list = ["%s" % c for c in cells]
+            print("Checking probe", "; ".join(fmt_list), ": ", end="")
             sys.stdout.flush()
             r = self.formula.solver.solve(assumes)
             end_time = time.time()
-            print("%6.2f %6.2f" % ((end_time - probe_time), (end_time - start_time)))
+            print("%.2f %.2f" % ((end_time - probe_time), (end_time - start_time)))
             if not r: continue
             print("leak")
 
             model = self.get_leak_model(assumes, positive)
-            leaks.append((model, [VariableInfo(ai.cycle, ai.cell_id) for ai in act_infos]))
+            leaks.append((model, var_infos))
             if len(leaks) >= self.num_leaks: break
         for i, loc in enumerate(leaks):
             model, acts = loc
