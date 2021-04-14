@@ -171,16 +171,6 @@ class Formula:
             self.active.append(tuple(node_to_vars[nid]))
         return
 
-    def make_assumes(self, shares):
-        assert(len(self.assume_act) == 0)
-        for ss in sorted(list(shares.keys())):
-            # if either all or none are active, there is a leak
-            tmp_pos, tmp_neg, act = [self.solver.get_var() for _ in range(3)]
-            self.solver.add_clauses(make_and_bool([self.check_vars[share] for share in shares[ss]], tmp_pos))
-            self.solver.add_clauses(make_and_bool([-self.check_vars[share] for share in shares[ss]], tmp_neg))
-            self.solver.add_clause([-act, tmp_pos, tmp_neg])
-            self.assume_act[ss] = act
-
     def model_for_vars(self, model, vars_id):
         props = self.prop_var_sets[vars_id]
         l = tuple(((x in model) & 1) if type(x) == int else int(x) for x in props.tuple())
@@ -436,52 +426,6 @@ class SatChecker(object):
 
             if nvars is not None: curr_vars[node_id] = nvars
 
-    """
-    def __make_checks(self):
-        assert(len(self.formula.check_vars) == 0)
-        # keys is just used to keep the order consistent
-        keys = list(self.formula.active.keys())
-        act_vars = [self.formula.active[key].prop_var for key in keys]
-
-        if self.probe_duration == ALWAYS:
-            node_to_act = {}
-            for key in keys:
-                info = self.formula.active[key]
-                if info.cell_id not in node_to_act:
-                    node_to_act[info.cell_id] = []
-                node_to_act[info.cell_id].append(info.prop_var)
-            acts = []
-            for n in node_to_act:
-                act = self.formula.solver.get_var()
-                self.formula.solver.add_clauses([[act, -x] for x in node_to_act[n]])
-                acts.append(act)
-            self.formula.solver.at_most_k_of_n(self.order, acts)
-        else:
-            self.formula.solver.at_most_k_of_n(self.order, act_vars)
-        for var_idx in range(self.num_vars):
-            var = -1
-            if var_idx < len(self.variables):
-                var = self.variables[var_idx]
-            else:
-                off = var_idx - len(self.variables)
-                cyc = off // len(self.randoms)
-                rnd = off % len(self.randoms)
-                var = (self.randoms[rnd], cyc)
-                assert(cyc < self.cycles)
-            ands = []
-            for kid, key in enumerate(keys):
-                prp = self.formula.prop_var_sets[key][var_idx]
-                if prp == "0": pass
-                elif prp == "1": ands.append(act_vars[kid])
-                else:
-                    c = self.formula.solver.get_var()
-                    self.formula.solver.add_clauses(
-                        make_and_bool_(prp, act_vars[kid], c))
-                    ands.append(c)
-            if len(ands) >= 1:
-                self.formula.check_vars[var] = self.formula.solver.xor_list(ands)
-    """
-
     def __init_propvarset(self, var_idx, var):
         gate_vars = PropVarSet(num=self.num_vars)
         gate_vars.ones.add(var_idx)
@@ -527,8 +471,6 @@ class SatChecker(object):
             cycle += 1
         #self.formula.solver.dbg_print()
         self.formula.collect_active(self.mode, self.cycles, self.probe_duration)
-        # self.__make_checks()
-        # self.formula.make_assumes(self.shares)
 
     def __get_assumes(self, ss):
         assumes = [self.formula.check_vars[share] for share in self.shares[ss]]
