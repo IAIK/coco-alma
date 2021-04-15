@@ -63,9 +63,9 @@ python3 %s/verify.py
     --label %s/my-labels.txt 
     --rst-name RstxBI
     --rst-phase 0
-    --cycles 26
+    --cycles 23
     --mode transient 
-    --probe-duration once
+    --probe-duration always
 """ % (ALMA_DIR, TMP_DIR, TMP_DIR)
 
 print(verify)
