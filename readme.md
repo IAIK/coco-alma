@@ -10,12 +10,12 @@ hardware level. This is also the focus of the related paper [COCO](https://eprin
 
 1. Create a new virtual environment
 ``` bash
-python3 -m venv develop
+python3 -m venv dev
 ```
 
 2. Activate the virtual environment
 ``` bash
-source develop/bin/activate
+source dev/bin/activate
 ```
 
 3. Install the required python packages
