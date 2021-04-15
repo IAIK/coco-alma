@@ -158,7 +158,7 @@ class Formula:
                 if duration == ONCE and vars[node] in self.covered_bot_vars: continue
                 active.add(vars[node])
         if duration == ONCE:
-            self.active = [tuple(x) for x in sorted(active)]
+            self.active = [(x,) for x in sorted(active)]
             return
 
         # collect vars from different clock cycles belonging to a node
