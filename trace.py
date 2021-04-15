@@ -7,7 +7,8 @@ import helpers
 import sys
 import shutil
 import time
-import re 
+import re
+import os
 
 OUT_FILE_PATH = defines.TMP_DIR + "/circuit.out"
 VCD_FILE_PATH = defines.TMP_DIR + "/circuit.vcd"
@@ -64,8 +65,15 @@ def parse_arguments():
     return args
 
 
-def run_with_log(command):
-    proc = subprocess.Popen(command, encoding="utf-8",
+def run_with_log(command, cwd=False):
+    if cwd:
+        # We need to run the command from a different directory.
+        path, executable = os.path.split(command[0])
+        command = ['./' + executable] + command[1:]
+    else:
+        path=None
+
+    proc = subprocess.Popen(command, cwd=path, encoding="utf-8",
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     with open(LOG_PATH, "a+") as log:
@@ -73,8 +81,8 @@ def run_with_log(command):
     return proc.returncode, stdout, stderr
 
 
-def check_run(command, message):
-    ret, out, err = run_with_log(command)
+def check_run(command, message, cwd=False):
+    ret, out, err = run_with_log(command, cwd)
     if ret != 0 or "error" in (out + err).lower():
         print(out)
         print(err)
@@ -143,7 +151,7 @@ def trace_verilator(args):
     check_run(compile_cmd, "ERROR: Compiling testbench failed.")
 
     print("4: Simulating circuit and generating VCD")
-    check_run([output_bin_path], "Simulating circuit failed.")
+    check_run([output_bin_path], "Simulating circuit failed.", cwd=True)
 
 
 def main():

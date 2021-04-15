@@ -16,7 +16,7 @@ int main(int argc, char **argv)
 {
 	Verilated::commandArgs(argc, argv);
 	Testbench<Vcircuit> *tb = new Testbench<Vcircuit>();
-    tb->opentrace("/tmp/tmp.vcd");
+    tb->opentrace("tmp.vcd");
     
     uint8_t key[16] = {0x3d, 0xc6, 0xa6, 0xa4, 0x30, 0x19, 0xb1, 0xa4, 
                        0xd5, 0x31, 0x0f, 0x1f, 0x00, 0x4d, 0x8d, 0x2d};

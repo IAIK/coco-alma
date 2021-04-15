@@ -24,7 +24,9 @@ python3 path_to/coco-alma/parse.py --log-yosys \
     --netlist path_to/coco-alma/tmp/circuit.v
 ```
 
-* Create your own Verilator testbench or use the one we provided to generate a trage. If you use the one we provided the trace is saved at `/tmp/tmp.vcd`. The example below uses the default location of the synthesized `circuit.v`.
+* Create your own Verilator testbench or use the one we provided to generate a trage.
+If you use the provided one, the VCD trace file `tmp.vcd` is created in the same directory as the executable of the Verilator simulation.
+The example below uses the default location of the synthesized `circuit.v`.
 ```bash
 python3 path_to/coco-alma/trace.py \
     --testbench path_to/coco-alma/examples/prince_ti/verilator_tb.cpp \

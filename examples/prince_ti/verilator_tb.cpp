@@ -6,7 +6,7 @@ int main(int argc, char **argv)
 {
 	Verilated::commandArgs(argc, argv);
 	Testbench<Vcircuit> *tb = new Testbench<Vcircuit>();
-    tb->opentrace("/tmp/tmp.vcd");
+    tb->opentrace("tmp.vcd");
     
     tb->reset();
     
