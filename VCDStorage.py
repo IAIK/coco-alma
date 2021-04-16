@@ -98,7 +98,8 @@ class VCDStorage:
         # signal_value = values[self.name_to_id[signal_name]]
         # assert(bit_num >= 0 and bit_num < len(signal_value)), (signal_name, bit_num)
         # return signal_value[-1 - bit_num]
-        if signal_name not in self.name_to_id: return "0"
+        # Verilator < 4.106 truncates long signal names
+        assert (signal_name in self.name_to_id), "Signal not found in VCD file"
         full_val = values[self.name_to_id[signal_name]]
         if bit_num is None: return full_val
         return full_val[-1 - bit_num]

@@ -23,7 +23,7 @@ source dev/bin/activate
 pip3 install -r requirements.txt
 ```
 
-4. Install Yosys >= 0.9 and Verilator >= 4.028:
+4. Install Yosys >= 0.9 and Verilator >= 4.106:
 * **Easy**: install it using your favourite package manager
 ``` bash
 apt install yosys verilator
