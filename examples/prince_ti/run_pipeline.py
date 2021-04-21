@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os, sys
 import subprocess as sp
 
@@ -62,14 +64,14 @@ verify = \
 """
 python3 %s/verify.py 
     --json %s/circuit.json 
-    --vcd /tmp/tmp.vcd 
+    --vcd %s/tmp.vcd
     --label %s/my-labels.txt 
     --rst-name i_reset 
     --cycles 3 
     --mode transient 
     --probe-duration once 
     --num-leaks 1
-""" % (ALMA_DIR, TMP_DIR, TMP_DIR)
+""" % (ALMA_DIR, TMP_DIR, TMP_DIR, TMP_DIR)
 # --trace-stable
 
 print(verify)

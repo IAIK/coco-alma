@@ -59,14 +59,14 @@ verify = \
 """
 python3 %s/verify.py 
     --json %s/circuit.json 
-    --vcd /tmp/tmp.vcd 
+    --vcd %s/tmp.vcd
     --label %s/my-labels.txt 
     --rst-name RstxBI
     --rst-phase 0
     --cycles 23
     --mode transient 
     --probe-duration always
-""" % (ALMA_DIR, TMP_DIR, TMP_DIR)
+""" % (ALMA_DIR, TMP_DIR, TMP_DIR, TMP_DIR)
 
 print(verify)
 res = sp.call(verify.split())

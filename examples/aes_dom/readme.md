@@ -35,32 +35,32 @@ python3 synth.py
   This produces a flattened verilog netlist. Since the AES-DOM implementation is pipelined and only gets one plaintext and key share per cycle, we provide an additional wrapper that expects the whole plaintext and key simultaneously.
   We synthesize this `aes_dom_wrapper.v` together with the main circuit using `parse.py`. The example below, saves all the data into coco-alma's temporary directory.
 ```bash
-python3 path_to/coco-alma/parse.py --log-yosys \
+python3 parse.py --log-yosys \
     --top-module aes_wrapper \
-    --source path_to/coco-alma/examples/aes_dom/tmp/circuit.v \
-             path_to/coco-alma/examples/aes_dom//aes_dom_wrapper.v \
-    --netlist path_to/coco-alma/tmp/circuit.v
+    --source examples/aes_dom/tmp/circuit.v \
+             examples/aes_dom//aes_dom_wrapper.v \
+    --netlist tmp/circuit.v
 ```
 
 * Create your own Verilator testbench or use the one we provided to generate a trace. 
-  If you use the one we provided the trace is saved at `/tmp/tmp.vcd`. 
+  If you use the one we provided the VCD trace file is saved as `tmp.vcd` in the same directory as the executable of the Verilator simulation. 
   The example below uses the default location of the synthesized `circuit.v`.
 ```bash
-python3 path_to/coco-alma/trace.py \
-    --testbench path_to/coco-alma/examples/aes_dom/verilator_tb.cpp \
-    --netlist path_to/coco-alma/tmp/circuit.v
+python3 trace.py \
+    --testbench examples/aes_dom/verilator_tb.cpp \
+    --netlist tmp/circuit.v
 ```
 * Create a labeling file for the AES-DOM inputs. We have provided a script that does this:
 ```bash
-python3 generate_labels.py path_to/coco-alma/tmp/labels.txt path_to/my-labels.txt
+python3 generate_labels.py tmp/labels.txt tmp/my-labels.txt
 ```
-* Run the verification script. In the case of our testbench, replace `path_to/vcd-file-location.vcd` with `tmp/tmp.vcd` since that is where it is generated. 
+* Run the verification script. Replace `tmp/tmp.vcd` with your vcd file location. 
   This program call verifies that there are no leaks in the first round of the cipher. For more rounds, increase the number of considered cycles.
 ```bash
 python3 verify.py \
-    --json path_to/coco-alma/tmp/circuit.json \
-    --vcd path_to/vcd-file-location.vcd \
-    --label path_to/my-labels.txt \
+    --json tmp/circuit.json \
+    --vcd tmp/tmp.vcd \
+    --label tmp/my-labels.txt \
     --rst-name RstxBI \
     --rst-phase 0 \
     --cycles 23 \
