@@ -95,11 +95,9 @@ class VCDStorage:
     def get_signal_value(self, signal_name, bit_num, prev=False):
         if signal_name in CONST_NAMES: return signal_name[-1]
         values = self.previous_values if prev else self.current_values
-        # signal_value = values[self.name_to_id[signal_name]]
-        # assert(bit_num >= 0 and bit_num < len(signal_value)), (signal_name, bit_num)
-        # return signal_value[-1 - bit_num]
         # Verilator < 4.106 truncates long signal names
         assert (signal_name in self.name_to_id), "Signal not found in VCD file"
         full_val = values[self.name_to_id[signal_name]]
         if bit_num is None: return full_val
+        assert (bit_num >= 0 and bit_num < len(full_val)), "Invalid bit index %d for %s" % (bit_num, signal_name)
         return full_val[-1 - bit_num]
