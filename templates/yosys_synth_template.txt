@@ -2,7 +2,7 @@
 hierarchy -check -top {TOP_MODULE};
 setattr -set keep 1 n:\*;
 
-proc; flatten; opt; memory;  opt; techmap; opt -purge; clean;
+proc; flatten; opt; memory; opt; techmap; opt -purge; clean;
 write_verilog -noattr {NETLIST_FILE_PATH};
 
 design -reset; design -reset-vlog;

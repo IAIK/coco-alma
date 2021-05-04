@@ -9,6 +9,7 @@ import json
 import defines
 import helpers
 import time
+import re
 from CircuitGraph import CircuitGraph
 from SafeGraph import SafeGraph
 
@@ -97,13 +98,25 @@ def yosys_synth(args):
         else:
             yosys_bin_path = get_yosys_bin_path()
 
-            
         if args.synthesis_file_path:
             print("Using custom yosys synthesis script: %s" % args.synthesis_file_path)
             yosys_synth_file_path = args.synthesis_file_path
         else:
             yosys_synth_file_path = SYNTH_FILE_PATH
-        
+
+        # Provide additional opt arguments for Yosys >= 0.9+3470
+        version = subprocess.check_output([yosys_bin_path, "-V"], stderr=subprocess.PIPE)
+        version = re.search(r"Yosys ([0-9]\.[0-9])\+([0-9]+)", str(version))
+        major = version.group(1)
+        minor = version.group(2)
+        if major > "0.9" or (major == "0.9" and minor >= "3470"):
+            yosys_script_patched = ""
+            with open(yosys_synth_file_path) as yosys_script:
+                yosys_script_patched += yosys_script.read()
+            yosys_script_patched = yosys_script_patched.replace("opt", "opt -nodffe -nosdff")
+            with open(yosys_synth_file_path, "w") as yosys_script:
+                yosys_script.write(yosys_script_patched)
+
         print("Starting yosys synthesis...")
         if args.log_yosys:
             subprocess.check_output([yosys_bin_path, "-l", defines.TMP_DIR + "/yosys_synth_log.txt", yosys_synth_file_path], stderr=subprocess.PIPE)
