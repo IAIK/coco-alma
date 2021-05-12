@@ -40,25 +40,25 @@ def parse_arguments():
                         help="C compiler used by Verilator")
     parser.add_argument("-o", "--output-bin", dest="output_bin_path",
                         required=False, default=None)
- 
+
     args, _ = parser.parse_known_args()
-    
+
     if args.c_compiler is None:
         compilers = [CLANG, GCC]
         for cxx in compilers:
             bin_ = shutil.which(cxx)
-            if bin_ is not None: 
+            if bin_ is not None:
                 args.c_compiler = cxx
                 break
     if args.c_compiler is None:
         print("ERROR: No compatible compiler found.")
         sys.exit(2)
-    
+
     if args.c_compiler == CLANG:
         args.cxx_compiler = CLANG_XX
     elif args.c_compiler == GCC:
         args.cxx_compiler = GCC_XX
-    
+
     assert(args.netlist_file_path.endswith(".v"))
     return args
 
@@ -94,7 +94,7 @@ def get_verilator_include_path():
 
 def trace_verilator(args):
     obj_dir_path = defines.TMP_DIR + "/obj_dir"
-    
+
     # tmp/circuit.v -> circuit
     raw_netlist_file_name = re.sub(r"(.*\/)", "", args.netlist_file_path).replace(".v", "")
 
@@ -103,7 +103,7 @@ def trace_verilator(args):
 
     if not(args.skip_compile_netlist):
         print("1: Running verilator on given netlist")
-        
+
         verilator_cmd = [VERILATOR, "--trace", "--trace-underscore", "--compiler", args.c_compiler, "-Wno-UNOPTFLAT", "-cc", args.netlist_file_path]
 
         check_run(verilator_cmd, "ERROR: Running verilator failed.")
@@ -126,17 +126,17 @@ def trace_verilator(args):
     include_paths = ["-I" + _ for _ in include_paths]
     cflags = ["-Wall", "-fno-diagnostics-color"]
     simulation_sources = [
-        args.tb_file_path, 
+        args.tb_file_path,
         "%s/V%s__ALL.a" % (obj_dir_path, raw_netlist_file_name),
         verilator_include_path + "/verilated.cpp",
         verilator_include_path + "/verilated_vcd_c.cpp"]
-    
+
 
     output_bin_path = defines.TMP_DIR + "/" + raw_netlist_file_name if args.output_bin_path == None else args.output_bin_path
 
     compile_cmd = [[args.cxx_compiler], cflags, include_paths,
-                   simulation_sources, ["-o", output_bin_path]]    
-    
+                   simulation_sources, ["-o", output_bin_path]]
+
     compile_cmd = sum(compile_cmd, [])  # Flatten compile command
 
     print("3: Compiling provided verilator testbench")
@@ -155,8 +155,8 @@ def main():
         print("ERROR: Could not open log: %s" % LOG_PATH)
         sys.exit(4)
 
-    
+
     trace_verilator(args)
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     main()
