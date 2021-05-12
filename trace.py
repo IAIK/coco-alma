@@ -5,7 +5,8 @@ import helpers
 import sys
 import shutil
 import time
-import re 
+import re
+import os
 
 OUT_FILE_PATH = defines.TMP_DIR + "/circuit.out"
 VCD_FILE_PATH = defines.TMP_DIR + "/circuit.vcd"
@@ -112,10 +113,11 @@ def trace_verilator(args):
         shutil.move("obj_dir", obj_dir_path)
 
         print("2: Compiling verilated netlist library")
+        make_parallelism = "-j" + str(os.cpu_count())
         if args.c_compiler == CLANG:
-            make_cmd = ["make", "-j", "2", "CXX=%s" % args.cxx_compiler, "-C", obj_dir_path, "-f", "V" + raw_netlist_file_name + ".mk"]
+            make_cmd = ["make", make_parallelism, "CXX=%s" % args.cxx_compiler, "-C", obj_dir_path, "-f", "V" + raw_netlist_file_name + ".mk"]
         else:
-            make_cmd = ["make", "-j", "2", "-C", obj_dir_path, "-f", "V" + raw_netlist_file_name + ".mk"]
+            make_cmd = ["make", make_parallelism, "-C", obj_dir_path, "-f", "V" + raw_netlist_file_name + ".mk"]
         check_run(make_cmd, "ERROR: Making verilated library failed.")
 
 
