@@ -12,6 +12,7 @@ SECURE_MEM = None
 MEM_WIDTH = None
 MEM_MODULE = None
 INSTR_LIMIT = None
+VERILATOR_AT_LEAST_4_200 = False
 
 def check_file_exists(file_path):
     if file_path == None: return None
@@ -28,6 +29,7 @@ try:
         opts = json.load(f)
         OBJDUMP_CMD = opts.get("objdump")
         ASM_CMD = opts.get("asm")
+        VERILATOR_AT_LEAST_4_200 = opts.get("verilator_at_least_4_200", False)
 except FileNotFoundError as e:
     print(e)
 
@@ -91,10 +93,13 @@ def create_raminit_header(args):
     
     for i in range(0, len(code), MEM_WIDTH):
         x = "0x" + ba.hexlify(code[i:i+MEM_WIDTH][::-1]).decode("ascii")
-        header.write("  tb->m_core->ibex_top__DOT__%s__02Emem__05B%d__05D = %s;\n" % \
-                     (MEM_MODULE, i // MEM_WIDTH, x))
-    
-    # parse data init file with format addr/reg ; value    
+        signal_name = "02Emem__05B%d__05D" % (i // MEM_WIDTH)
+        if VERILATOR_AT_LEAST_4_200:
+            signal_name = signal_name.lower()
+        signal_name = ("ibex_top__DOT__%s__" % MEM_MODULE) + signal_name
+        header.write("  tb->m_core->%s = %s;\n" % (signal_name, x))
+
+    # parse data init file with format addr/reg ; value
     reg, mem = [], []
     if args.init_file_path is not None:
         data = None
@@ -106,13 +111,20 @@ def create_raminit_header(args):
     
     for m in mem:
         addr, val = int(m[0], 0) // MEM_WIDTH, m[1]
-        header.write("  tb->m_core->ibex_top__DOT__u_ram__02Emem__05B%d__05D = %s;\n" % (addr, val))
+        signal_name = "02Emem__05B%d__05D" % addr
+        if VERILATOR_AT_LEAST_4_200:
+            signal_name = signal_name.lower()
+        signal_name = "ibex_top__DOT__u_ram__" + signal_name
+        header.write("  tb->m_core->%s = %s;\n" % (signal_name, val))
     header.write("  tb->reset();\n")
     for r in reg:
         addr, val = r[0][1:], r[1]
-        header.write("  tb->m_core->ibex_top__DOT__u_core__02Eregister_file_i__02Erf"
-                     "_reg_tmp__05B%d__05D = %s;\n" % (addr, val))
-        
+        signal_name = "02Eregister_file_i__02Erf_reg_tmp__05B%d__05D" % addr
+        if VERILATOR_AT_LEAST_4_200:
+            signal_name = signal_name.lower()
+        signal_name = "ibex_top__DOT__u_core__" + signal_name
+        header.write("  tb->m_core->%s = %s;\n" % (signal_name, val))
+
     header.write("}\n")
     header.close()
 
