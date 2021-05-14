@@ -483,7 +483,7 @@ class SatChecker(object):
         RST_VAL_AFTER = BIN_STR[(int(self.rst_phase) + 1) % 2]
         while (self.cycles == -1 or cycle < self.cycles) and self.trace.parse_next_cycle():
             assert (self.trace.get_signal_value(self.rst_name, 0) == RST_VAL_AFTER)
-            self.__dbg_cycle_instruction(cycle)
+            #self.__dbg_cycle_instruction(cycle)
             print("Building formula for cycle %d vars %d clauses %d\n" % (cycle, self.formula.solver.nof_vars(), self.formula.solver.nof_clauses()), end="")
             self.__build_stable(cycle == 0)
             if self.mode == TRANSIENT:
