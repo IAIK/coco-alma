@@ -480,6 +480,9 @@ class SatChecker(object):
         while (cycle < self.cycles) and self.trace.parse_next_cycle():
             assert (self.trace.get_signal_value(self.rst_name, 0) == RST_VAL_AFTER)
             self.__init_cycle(cycle)
+            # print("rcon is", "%02x" % int(self.trace.get_signal_value("design.rconxd", None), 2))
+            print("rc_sel is", "%02x" % int(self.trace.get_signal_value("rc_sel", None), 2))
+            print("rnd_cnt is", "%02x" % int(self.trace.get_signal_value("rnd_cnt", None), 2))
             print("Building formula for cycle %d vars %d clauses %d\n" % (cycle, self.formula.solver.nof_vars(), self.formula.solver.nof_clauses()), end="")
             self.__build_stable()
             if self.mode == TRANSIENT:
@@ -704,7 +707,10 @@ class SatChecker(object):
         all_masks = self.masks + rand_masks
         start_time = time.time()
         leaks = []
-        for vars_ids in itertools.combinations(self.formula.active, self.order):
+        num_probes = 1
+        for i in range(self.order):
+            num_probes *= (len(self.formula.active) - i) / (i + 1)
+        for probe_i, vars_ids in enumerate(itertools.combinations(self.formula.active, self.order)):
             all_ids = tuple(set(sum(vars_ids, tuple())))
             var_infos = [self.formula.vars_to_info[vid] for vid in all_ids]
 
@@ -726,7 +732,7 @@ class SatChecker(object):
             # trivial case, no complete secrets
             if act_assumes is None: continue
 
-            assumes = mask_assumes + act_assumes
+            assumes = mask_assumes + act_assumes + [pvs.activator]
             if self.probe_duration == ONCE:
                 cells = [self.circuit.cells[ai.cell_id] for ai in var_infos]
                 fmt_list = ["(cycle %d, %s)" % (vi.cycle, c) for vi,c in zip(var_infos, cells)]
@@ -734,7 +740,7 @@ class SatChecker(object):
                 cell_ids = set(ai.cell_id for ai in var_infos)
                 cells = [self.circuit.cells[cid] for cid in cell_ids]
                 fmt_list = ["%s" % c for c in cells]
-            print("Checking probe", "; ".join(fmt_list), ": ", end="")
+            print("Checking probe", "%d/%d" % (probe_i, num_probes), "; ".join(fmt_list), ": ", end="")
             sys.stdout.flush()
             r = self.formula.solver.solve(assumes)
             end_time = time.time()
@@ -745,6 +751,7 @@ class SatChecker(object):
             model = self.get_leak_model(assumes, positive)
             leaks.append((model, var_infos))
             if len(leaks) >= self.num_leaks: break
+        print("Finished in %.2f" % (time.time() - start_time))
         for i, loc in enumerate(leaks):
             model, acts = loc
             self.__dbg_state(i, model, acts)
