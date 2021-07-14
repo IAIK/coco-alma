@@ -70,7 +70,6 @@ python3 %s/verify.py
     --probe-duration once 
     --num-leaks 1
 """ % (ALMA_DIR, TMP_DIR, TMP_DIR, PRINCE_DIR)
-# --trace-stable
 
 print(verify)
 res = sp.call(verify.split())
