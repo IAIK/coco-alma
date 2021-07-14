@@ -38,35 +38,21 @@ if res:
     print("Tracing failed")
     sys.exit(res)
 
-##### LABELING
-
-labels = \
-"""
-python3 %s/generate_labels.py %s/labels.txt %s/my-labels.txt
-""" % (AES_DIR, TMP_DIR, TMP_DIR)
-
-print(labels)
-res = sp.call(labels.split())
-
-if res:
-    print("Labeling failed")
-    sys.exit(res)
-
-
 ##### VERIFICATION
 
 verify = \
 """
 python3 %s/verify.py 
+    --top-module aes_wrapper 
     --json %s/circuit.json 
     --vcd %s/tmp.vcd
-    --label %s/my-labels.txt 
+    --label %s/labels.txt 
     --rst-name RstxBI
     --rst-phase 0
     --cycles 23
     --mode transient 
     --probe-duration always
-""" % (ALMA_DIR, TMP_DIR, TMP_DIR, TMP_DIR)
+""" % (ALMA_DIR, TMP_DIR, TMP_DIR, AES_DIR)
 
 print(verify)
 res = sp.call(verify.split())

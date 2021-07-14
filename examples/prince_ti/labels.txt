@@ -1,0 +1,6 @@
+# inputs:
+i_pt1 [63:0] = secret 63:0
+i_pt2 [63:0] = secret 63:0
+i_key1 [127:0] = secret 191:64
+i_key2 [127:0] = secret 191:64
+i_r [47:0] = random
