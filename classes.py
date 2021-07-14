@@ -119,11 +119,11 @@ class PropVarSet:
                         cl.append(-self.activator)
                         solver.add_clause(cl)
                     self.vars[i] = z
-            if self.activator is not None:
-                if arg0.activator is not None:
-                    solver.add_clause([-self.activator, arg0.activator])
-                if arg1.activator is not None:
-                    solver.add_clause([-self.activator, arg0.activator])
+            pref = [-self.activator] if self.activator is not None else []
+            if arg0.activator is not None:
+                solver.add_clause(pref + [arg0.activator])
+            if arg1.activator is not None:
+                solver.add_clause(pref + [arg1.activator])
         pass
 
     def __getitem__(self, idx):

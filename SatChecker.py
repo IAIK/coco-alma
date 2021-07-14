@@ -480,15 +480,11 @@ class SatChecker(object):
         while (cycle < self.cycles) and self.trace.parse_next_cycle():
             assert (self.trace.get_signal_value(self.rst_name, 0) == RST_VAL_AFTER)
             self.__init_cycle(cycle)
-            # print("rcon is", "%02x" % int(self.trace.get_signal_value("design.rconxd", None), 2))
-            print("rc_sel is", "%02x" % int(self.trace.get_signal_value("rc_sel", None), 2))
-            print("rnd_cnt is", "%02x" % int(self.trace.get_signal_value("rnd_cnt", None), 2))
             print("Building formula for cycle %d vars %d clauses %d\n" % (cycle, self.formula.solver.nof_vars(), self.formula.solver.nof_clauses()), end="")
             self.__build_stable()
             if self.mode == TRANSIENT:
                 self.__build_trans()
             cycle += 1
-        #self.formula.solver.dbg_print()
         self.formula.collect_active(self.mode, self.cycles, self.probe_duration)
 
     def __get_assumes(self, ss):
@@ -732,7 +728,9 @@ class SatChecker(object):
             # trivial case, no complete secrets
             if act_assumes is None: continue
 
-            assumes = mask_assumes + act_assumes + [pvs.activator]
+            assumes = mask_assumes + act_assumes
+            if pvs.activator is not None:
+                assumes.append(pvs.activator)
             if self.probe_duration == ONCE:
                 cells = [self.circuit.cells[ai.cell_id] for ai in var_infos]
                 fmt_list = ["(cycle %d, %s)" % (vi.cycle, c) for vi,c in zip(var_infos, cells)]
