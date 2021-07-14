@@ -125,33 +125,28 @@ def yosys_synth(args):
     return circuit_json
 
 
-def create_label_template(circuit_json, label_file_path):
+def get_label_temp(name, bit_len):
+    if bit_len == 1:
+        return defines.LABEL_FORMAT_BIT % (name, defines.LABEL_OTHER)
+    else:
+        return defines.LABEL_FORMAT_SLICE % (name, bit_len - 1, 0, defines.LABEL_OTHER)
+
+
+def create_label_template(circuit_json, label_file_path, top_module):
     label_file = open(label_file_path, "w")
-    top_module = circuit_json["top_module"]
     module = circuit_json["modules"][top_module]
-    name_lookup, pos_lookup = helpers.bit_to_net(module)
-    
+    net_bits, bit_info, regs = helpers.bit_to_net(module)
+
     label_file.write("# inputs:\n")
-    for port in module['ports']:
+    for port in module["ports"]:
         if module["ports"][port]["direction"] == "output": continue
         port_bits = module["ports"][port]["bits"]
-        for bit, bit_pos in zip(port_bits, range(len(port_bits))):
-            label_file.write('%s:%d:%d: %s\n' % (port, bit_pos, bit, defines.LABEL_OTHER))
-    
-    label_file.write("# registers:\n")
-    for cell in module["cells"]:
-        cell_data = module["cells"][cell]
-        cell_type_str = cell_data["type"].split("_")[1].lower()
-        cell_type = defines.cell_enum[cell_type_str]
-        if cell_type not in defines.REGISTER_TYPES: continue
-        cell_directions = cell_data["port_directions"]
-        cell_outputs = [x for x in cell_directions if cell_directions[x] == "output"]
-        assert(len(cell_outputs) == 1)
-        bits = cell_data["connections"][cell_outputs[0]]
-        assert(len(bits) == 1)
-        name, pos, bit = name_lookup[bits[0]], pos_lookup[bits[0]], bits[0]
-        label_file.write("%s:%d:%d: %s\n" % (name, pos, bit, defines.LABEL_OTHER))
+        label_file.write(get_label_temp(port, len(port_bits)))
 
+    label_file.write("# registers:\n")
+    for reg_name in regs:
+        bits = net_bits[reg_name]
+        label_file.write(get_label_temp(reg_name, len(bits)))
     label_file.close()
 
 
@@ -179,12 +174,12 @@ def main():
         create_yosys_script(args)
     circuit_json = yosys_synth(args)
 
-    create_label_template(circuit_json, args.label_file_path)
+    create_label_template(circuit_json, args.label_file_path, args.top_module)
 
-    circuit_graph = CircuitGraph(circuit_json)
-    circuit_graph.write_pickle()
-    safe_graph = SafeGraph(circuit_graph.graph)
-    safe_graph.write_pickle()
+    circuit_graph = CircuitGraph(circuit_json, args.top_module)
+    # circuit_graph.write_pickle()
+    # safe_graph = SafeGraph(circuit_graph.graph)
+    # safe_graph.write_pickle()
     
     tstp_end = time.time()
     print("parse.py successful (%.2fs)"%(tstp_end-tstp_begin))

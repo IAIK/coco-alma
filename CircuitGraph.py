@@ -9,10 +9,10 @@ CONST_TO_BIT = {"0": 0, "1": 1, "x": -1, "z": -2}
 
 
 class CircuitGraph:
-    def __init__(self, circuit_json):
+    def __init__(self, circuit_json, top_module):
         self.graph = nx.DiGraph()
         self.circuit_json = circuit_json
-        self.top_module = self.circuit_json["top_module"]
+        self.top_module = top_module
         self.parse_json()
         #self.write_graph()
         self.print_graph_info()
@@ -21,7 +21,7 @@ class CircuitGraph:
     def parse_json(self):
         wires = {}  # output -> inputs
         module = self.circuit_json["modules"][self.top_module]
-        name_lookup, pos_lookup = helpers.bit_to_net(module)
+        net_bits, bit_info, _ = helpers.bit_to_net(module)
         self.graph.clear()
 
         # Add constants, to make things easier
@@ -34,7 +34,8 @@ class CircuitGraph:
             if module["ports"][port]["direction"] == "output": continue
             for bit in module["ports"][port]["bits"]:
                 assert(type(bit) == int), "Port bits must be integers"
-                self.add_cell(bit, Cell(name_lookup[bit], PORT_TYPE, pos_lookup[bit]))
+                info = bit_info[bit]
+                self.add_cell(bit, Cell(info[0], PORT_TYPE, info[1]))
                 wires[bit] = []
 
         # Gather all cells
@@ -76,7 +77,8 @@ class CircuitGraph:
             # Add the cell and its wires
             wires[out_wire] = in_wires
             if cell_type == MUX_TYPE: mux_ins = in_wires
-            cell = Cell(name_lookup[out_wire], cell_type, pos_lookup[out_wire], select, mux_ins, clock, reset)
+            info = bit_info[out_wire]
+            cell = Cell(info[0], cell_type, info[1], select, mux_ins, clock, reset)
             self.add_cell(out_wire, cell)
 
         # Create all connections

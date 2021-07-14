@@ -50,11 +50,14 @@ ONCE = "once"
 ALWAYS = "always"
 
 # define label types
-LABEL_SHARE = "share"
+LABEL_SHARE = "secret"
 LABEL_MASK = "mask"
 LABEL_RANDOM = "random"
 LABEL_OTHER = "unimportant"
 LABEL_TYPES = (LABEL_SHARE, LABEL_MASK, LABEL_RANDOM, LABEL_OTHER)
+
+LABEL_FORMAT_BIT = "%s = %s\n"
+LABEL_FORMAT_SLICE = "%s [%d:%d] = %s\n"
 
 # directory defines
 ALMA_DIR = os.path.dirname(os.path.realpath(__file__))

@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
-import argparse
-import sys
 from CircuitGraph import CircuitGraph
-import time
-import networkx as nx
-from SatChecker import SatChecker
-from defines import *
 from classes import *
-import helpers
+from defines import *
+from SafeGraph import SafeGraph
+from SatChecker import SatChecker
 from VCDStorage import *
+import argparse
+import helpers
+import json
+import networkx as nx
+import sys
+import time
 
 SECURE = 0
 INSECURE = -1
@@ -63,6 +65,10 @@ def parse_arguments():
                         required=False, default=TMP_DIR,
                         help="Directory in which debug traces (dbg-label-trace-?.txt, dbg-circuit-?.dot) are written (default: %(default)s)")
 
+    parser.add_argument("--top-module", dest="top_module",
+                        required=True, type=str,
+                        help="Name of the top module")
+
     args, unknown = parser.parse_known_args()
     if args.cycles <= 0:    args.cycles = UINT_MAX
     if args.num_leaks <= 0: args.num_leaks = UINT_MAX
@@ -73,21 +79,47 @@ def parse_arguments():
     return args
 
 
-def generate_labeling(label_file_path):
+def generate_labeling(label_file_path, json_module):
+    net_bits, _, _ = helpers.bit_to_net(json_module)
     label_data = ""
     with open(label_file_path, "r") as f:
         label_data = f.read()
     label_data = label_data.strip().split("\n")
     label_dict = {}
-    for line in label_data:
+    for li, line in enumerate(label_data):
+        line = line.strip()
         if line[0] == "#": continue
-        signal_id, signal_label = line.split(": ")
-        signal_id = int(signal_id.split(":")[-1])
+        info = line.split(" = ")
+        assert(len(info) == 2), "label format error in line %d" % li
+        signal_str, signal_label = info
+        signal_name, signal_top, signal_bot = None, 0, 0
+        signal_str = signal_str.strip()
+        if signal_str in net_bits:
+            assert(len(net_bits[signal_str]) == 1), "label size error in line %d" % li
+            signal_name = signal_str
+        else:
+            info = signal_str.split()
+            assert(len(info) == 2), "label format error in line %d" % li
+            signal_name, rest = info
+            assert(signal_name in net_bits), "label error in line %d: %s does not exist" % (li, signal_name)
+            assert(rest[0] == "[" and rest[-1] == "]"), "label range %s invalid in line %d" % (rest, li)
+            rest = rest[1:-1]
+            if ":" in rest:
+                signal_top, signal_bot = [int(x) for x in rest.split(":")]
+                assert(signal_top >= signal_bot), "label range inverted in line %d" % li
+                assert(signal_bot >= 0), "label range negative in line %d" % li
+                assert(signal_top < len(net_bits[signal_name])), "label range longer than signal in line %d" % li
+            else:
+                singal_top, signal_bot = int(rest), int(rest)
+
         signal_label = signal_label.strip().split()
         label_type = signal_label[0]
         assert(label_type in LABEL_TYPES)
         assert((label_type in (LABEL_MASK, LABEL_RANDOM, LABEL_OTHER) and len(signal_label) == 1) or
                (label_type == LABEL_SHARE and len(signal_label) == 2))
+        share_bot, share_top = None, None
+
+
         share_num = int(signal_label[1]) if label_type == LABEL_SHARE else None
         label_dict[signal_id] = Label(signal_id, label_type, share_num)
     return label_dict
@@ -100,11 +132,48 @@ def vcd_json_sanity_check(trace, circuit_graph, rst_name):
         assert (("const" in graph_node_name) or (graph_node_name in trace.name_to_id)), "%s not recognized"%(graph_node_name)
 
 
+def pretty_error(checker, cycle, cell):
+    # from SatChecker.py: SatChecker.__dbg_write_label_trace
+    cells = [checker.circuit.cells[x] for x in checker.variables]
+    initial = ["%s:%s" % (c.name, c.pos) for c in cells]
+    # mapping = dict(zip(checker.pretty_names, initial))
+
+    stable = checker.formula.node_vars_stable[cycle]
+    trans = checker.formula.node_vars_trans[cycle] if checker.mode == TRANSIENT else None
+    model = set(checker.formula.solver.get_model())
+
+    for node_id in checker.circuit.nodes:
+        node_cell = checker.circuit.cells[node_id]
+        if node_cell != cell: continue
+
+        for mode, mstr in zip((stable, trans), ("stable", "trans ")):
+            if mode is None or node_id not in mode: continue
+            res = checker.formula.model_for_vars(model, mode[node_id])
+
+            # generate mappings for signals that contribute to the leak
+            pretty_comp = [n for n, v in zip(checker.pretty_names, res) if v == 1]
+            initial_comp = [n for n, v in zip(initial, res) if v == 1]
+
+            if(len(pretty_comp) > len(initial_comp)):
+                continue  # random numbers contribute -> ignore the report
+
+            print("{} {} {} vars   : {}".format(cycle, mstr, cell, pretty_comp))
+            initial_comp = ["dut.{0}[{1}]".format(*x.split(':')) for x in initial_comp]
+            print("{} {} {} signals: {}".format(cycle, mstr, cell, " ^ ".join(initial_comp)))
+
+
 def main():
     args = parse_arguments()
-    label_dict = generate_labeling(args.label_file_path)
+
+    with open(args.json_file_path, "r") as f:
+        circuit_json = json.load(f)
+    circuit_graph = CircuitGraph(circuit_json, args.top_module)
+    safe_graph = SafeGraph(circuit_graph.graph)
+
+    module = circuit_json["modules"][args.top_module]
+    label_dict = generate_labeling(args.label_file_path, module)
     trace = VCDStorage(args.vcd_file_path)
-    checker = SatChecker(label_dict, trace, args)
+    checker = SatChecker(label_dict, trace, safe_graph, args)
 
     status, locations = checker.check()
     leaks = [l[1] for l in locations]
@@ -112,15 +181,17 @@ def main():
         print("The execution is secure")
         sys.exit(SECURE)
     else:
-        circuit_graph = nx.read_gpickle(TMP_DIR + "/circuit_graph.gpickle") 
         sys.stdout.write("The execution is not secure, here are some leaks:\n")
         for i in range(len(leaks)):
             gates = leaks[i]
             sys.stdout.write("leak %d: " % i)
             for g in gates:
-                cell = circuit_graph.nodes[g.cell_id]["cell"]
+                cell = circuit_graph.graph.nodes[g.cell_id]["cell"]
                 sys.stdout.write("(cycle: %d, cell: %s, id: %d) " % (g.cycle, cell, g.cell_id))
             sys.stdout.write("\n")
+            for g in gates:
+                cell = circuit_graph.graph.nodes[g.cell_id]["cell"]
+                pretty_error(checker, g.cycle, cell)
         sys.exit(INSECURE)
 
 

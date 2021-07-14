@@ -221,11 +221,10 @@ class Formula:
 
 
 class SatChecker(object):
-    def __init__(self, labels, trace, args):
+    def __init__(self, labels, trace, safe_graph, args):
         assert(args.mode in (TRANSIENT, STABLE))
 
-        with open(TMP_DIR + "/safe_graph.pickle", 'rb') as f:
-            self.circuit = pickle.load(f)
+        self.circuit = safe_graph
 
         assert(args.probe_duration != ALWAYS or args.cycles != UINT_MAX)
         self.labels = labels
