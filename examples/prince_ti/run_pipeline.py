@@ -63,13 +63,13 @@ python3 %s/verify.py
     --top-module top_module_d11
     --json %s/circuit.json 
     --vcd %s/tmp.vcd
-    --label %s/labels.txt 
+    --label %s/labels%s.txt 
     --rst-name i_reset 
     --cycles 3 
     --mode transient 
     --probe-duration once 
     --num-leaks 1
-""" % (ALMA_DIR, TMP_DIR, TMP_DIR, PRINCE_DIR)
+""" % (ALMA_DIR, TMP_DIR, TMP_DIR, PRINCE_DIR, "_secure" if SECURE else "")
 
 print(verify)
 res = sp.call(verify.split())
