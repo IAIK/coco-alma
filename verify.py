@@ -86,7 +86,8 @@ def generate_labeling(label_file_path, json_module):
         label_data = f.read()
     label_data = label_data.strip().split("\n")
     label_dict = {}
-    for li, line in enumerate(label_data):
+    for li_, line in enumerate(label_data):
+        li = li_ + 1
         line = line.strip()
         if line[0] == "#": continue
         info = line.split(" = ")
@@ -104,24 +105,25 @@ def generate_labeling(label_file_path, json_module):
             assert(signal_name in net_bits), "label error in line %d: %s does not exist" % (li, signal_name)
             assert(rest[0] == "[" and rest[-1] == "]"), "label range %s invalid in line %d" % (rest, li)
             rest = rest[1:-1]
-            if ":" in rest:
-                signal_top, signal_bot = [int(x) for x in rest.split(":")]
-                assert(signal_top >= signal_bot), "label range inverted in line %d" % li
-                assert(signal_bot >= 0), "label range negative in line %d" % li
-                assert(signal_top < len(net_bits[signal_name])), "label range longer than signal in line %d" % li
-            else:
-                singal_top, signal_bot = int(rest), int(rest)
+            signal_top, signal_bot = helpers.get_slice(rest, li, len(net_bits[signal_name]))
 
         signal_label = signal_label.strip().split()
         label_type = signal_label[0]
         assert(label_type in LABEL_TYPES)
         assert((label_type in (LABEL_MASK, LABEL_RANDOM, LABEL_OTHER) and len(signal_label) == 1) or
                (label_type == LABEL_SHARE and len(signal_label) == 2))
-        share_bot, share_top = None, None
+        if label_type == LABEL_OTHER: continue
 
-
-        share_num = int(signal_label[1]) if label_type == LABEL_SHARE else None
-        label_dict[signal_id] = Label(signal_id, label_type, share_num)
+        share_top, share_bot = None, None
+        if label_type == LABEL_SHARE:
+            share_top, share_bot = helpers.get_slice(signal_label[1], li, None)
+            assert(share_top - share_bot == signal_top - signal_bot), "label length mismatch in line %d" % li
+        for pos in range(signal_top + 1 - signal_bot):
+            signal_pos = signal_bot + pos
+            share_pos = None if (share_bot is None) else (share_bot + pos)
+            bit = net_bits[signal_name][signal_pos]
+            assert(bit not in label_dict), "label re-declaration for %s[%d] in line %d" % (signal_name, signal_pos, li)
+            label_dict[bit] = Label(bit, label_type, share_pos)
     return label_dict
 
 
