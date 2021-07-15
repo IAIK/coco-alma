@@ -21,7 +21,6 @@ class Formula:
         self.nonlin_set_cache = {}   # (vars...) -> vars
         self.biased_cache = set()    # {vars...}
         self.biased_vars = set()     # {vars...}
-        self.active = []             # [vars...]
         self.check_vars = {}         # labeled node -> prop
         self.assume_act = {}         # labeled node -> prop
         self.covering_top_vars = {}  # vars -> {vars...}
@@ -148,22 +147,28 @@ class Formula:
                 self.linear_set_cache[(gate_vars.id,)] = gate_vars.id
         return gate_vars.id
 
-    def collect_active(self, mode, cycles, duration):
+    def collect_active_once(self, mode, cycle):
+        node_vars = [self.node_vars_stable, self.node_vars_trans][(mode == TRANSIENT) & 1]
+        active = set()
+        vars = node_vars[cycle]
+        for node in vars.keys():
+            self.vars_to_info[vars[node]] = VariableInfo(cycle, node)
+            if vars[node] in self.covered_bot_vars: continue
+            active.add(vars[node])
+        return [(x,) for x in sorted(active)]
+
+    def collect_active_always(self, mode):
         node_vars = [self.node_vars_stable, self.node_vars_trans][(mode == TRANSIENT) & 1]
         active = set()
         for cycle, vars in enumerate(node_vars):
             for node in vars.keys():
                 self.vars_to_info[vars[node]] = VariableInfo(cycle, node)
-                if vars[node] in active: continue
-                if duration == ONCE and vars[node] in self.covered_bot_vars: continue
                 active.add(vars[node])
-        if duration == ONCE:
-            self.active = [(x,) for x in sorted(active)]
-            return
 
         # collect vars from different clock cycles belonging to a node
         node_to_vars = {}
         node_to_covers = {}
+        all_active = []
         for vars_id in active:
             info = self.vars_to_info[vars_id]
             if info.cell_id not in node_to_vars:
@@ -184,8 +189,8 @@ class Formula:
         for nid in node_to_vars:
             if len(node_to_covers[nid]) != 0:
                 continue
-            self.active.append(tuple(node_to_vars[nid]))
-        return
+            all_active.append(tuple(node_to_vars[nid]))
+        return all_active
 
     def model_for_vars(self, model, vars_id):
         props = self.prop_var_sets[vars_id]
@@ -252,7 +257,6 @@ class SatChecker(object):
         assert (self.num_vars == len(self.pretty_names))
 
         self.formula = Formula(self.num_vars)
-        self.__build_formula()
 
     def __extract_label_info(self, labels):
         for label_id in labels.keys():
@@ -466,25 +470,31 @@ class SatChecker(object):
         for var, var_idx in zip(self.randoms, range(start, start + len(self.randoms))):
             self.__init_propvarset(var_idx, var)
 
-    def __build_formula(self):
+    def __find_reset(self):
         for i in range(self.rst_cycles):
             self.trace.parse_next_cycle()
             print(self.trace.get_signal_value(self.rst_name, 0))
         assert (len(self.formula.node_vars_stable) == 0)
         assert (len(self.formula.node_vars_trans) == 0)
 
+    def __build_cycle(self, reset, cycle):
+        assert (self.trace.get_signal_value(self.rst_name, 0) == reset)
+        self.__init_cycle(cycle)
+        print("Building formula for cycle %d: " % cycle, end="")
+        self.__build_stable()
+        if self.mode == TRANSIENT:
+            self.__build_trans()
+        print("vars %d clauses %d" % (self.formula.solver.nof_vars(), self.formula.solver.nof_clauses()))
+
+    def __build_formula(self):
+        self.__find_reset()
         cycle = 0
-        RST_VAL_AFTER = BIN_STR[(int(self.rst_phase) + 1) % 2]
+        inactive_val = str((self.rst_phase == "0") & 1)
 
         while (cycle < self.cycles) and self.trace.parse_next_cycle():
-            assert (self.trace.get_signal_value(self.rst_name, 0) == RST_VAL_AFTER)
-            self.__init_cycle(cycle)
-            print("Building formula for cycle %d vars %d clauses %d\n" % (cycle, self.formula.solver.nof_vars(), self.formula.solver.nof_clauses()), end="")
-            self.__build_stable()
-            if self.mode == TRANSIENT:
-                self.__build_trans()
+            self.__build_cycle(inactive_val, cycle)
             cycle += 1
-        self.formula.collect_active(self.mode, self.cycles, self.probe_duration)
+        self.cycles = cycle
 
     def __get_assumes(self, ss):
         assumes = [self.formula.check_vars[share] for share in self.shares[ss]]
@@ -694,62 +704,109 @@ class SatChecker(object):
             model = set(self.formula.solver.get_model())
         return model
 
-    def check(self):
-        rand_masks = []
-        for r in self.randoms:
-            for cyc in range(self.cycles):
-                rand_masks.append((r, cyc))
-        all_masks = self.masks + rand_masks
-        start_time = time.time()
-        leaks = []
-        num_probes = 1
-        for i in range(self.order):
-            num_probes *= (len(self.formula.active) - i) / (i + 1)
-        for probe_i, vars_ids in enumerate(itertools.combinations(self.formula.active, self.order)):
-            all_ids = tuple(set(sum(vars_ids, tuple())))
-            var_infos = [self.formula.vars_to_info[vid] for vid in all_ids]
+    def __check_tuple(self, all_ids, masks):
+        var_infos = [self.formula.vars_to_info[vid] for vid in all_ids]
 
-            if all(map(lambda x: x.cycle < self.from_cycle, var_infos)): continue
-            probe_time = time.time()
+        if all(map(lambda x: x.cycle < self.from_cycle, var_infos)): return None
+        probe_time = time.time()
 
-            pvs_id = all_ids[0]
-            for pvs_id_ in all_ids[1:]:
-                pvs_id = self.formula.make_simple(AND_TYPE, pvs_id, pvs_id_)
-                assert(pvs_id is not None)
+        pvs_id = all_ids[0]
+        for pvs_id_ in all_ids[1:]:
+            pvs_id = self.formula.make_simple(AND_TYPE, pvs_id, pvs_id_)
+            assert (pvs_id is not None)
 
-            pvs = self.formula.prop_var_sets[pvs_id]
-            mask_assumes = {pvs[self.var_indexes[m]] for m in all_masks}
-            # trivial case, a mask is always active
-            if "1" in mask_assumes: continue
-            mask_assumes = [-x for x in mask_assumes if type(x) != str]
+        pvs = self.formula.prop_var_sets[pvs_id]
+        mask_assumes = {pvs[self.var_indexes[m]] for m in masks}
+        # trivial case, a mask is always active
+        if "1" in mask_assumes: return None
+        mask_assumes = [-x for x in mask_assumes if type(x) != str]
 
-            act_assumes, positive = self.get_assumes(pvs)
-            # trivial case, no complete secrets
-            if act_assumes is None: continue
+        act_assumes, positive = self.get_assumes(pvs)
+        # trivial case, no complete secrets
+        if act_assumes is None: return None
 
-            assumes = mask_assumes + act_assumes
-            if pvs.activator is not None:
-                assumes.append(pvs.activator)
-            if self.probe_duration == ONCE:
-                cells = [self.circuit.cells[ai.cell_id] for ai in var_infos]
-                fmt_list = ["(cycle %d, %s)" % (vi.cycle, c) for vi,c in zip(var_infos, cells)]
-            else:
-                cell_ids = set(ai.cell_id for ai in var_infos)
-                cells = [self.circuit.cells[cid] for cid in cell_ids]
-                fmt_list = ["%s" % c for c in cells]
-            print("Checking probe", "%d/%d" % (probe_i, num_probes), "; ".join(fmt_list), ": ", end="")
-            sys.stdout.flush()
-            r = self.formula.solver.solve(assumes)
-            end_time = time.time()
-            print("%.2f %.2f" % ((end_time - probe_time), (end_time - start_time)))
-            if not r: continue
-            print("leak")
+        assumes = mask_assumes + act_assumes
+        if pvs.activator is not None:
+            assumes.append(pvs.activator)
+        if self.probe_duration == ONCE:
+            cells = [self.circuit.cells[ai.cell_id] for ai in var_infos]
+            fmt_list = ["(cycle %d, %s)" % (vi.cycle, c) for vi, c in zip(var_infos, cells)]
+        else:
+            cell_ids = set(ai.cell_id for ai in var_infos)
+            cells = [self.circuit.cells[cid] for cid in cell_ids]
+            fmt_list = ["%s" % c for c in cells]
+        print("Checking probe", "; ".join(fmt_list), ": ", end="")
+        sys.stdout.flush()
+        r = self.formula.solver.solve(assumes)
+        end_time = time.time()
+        print("%.2f" % (end_time - probe_time))
+        if not r: return None
+        model = self.get_leak_model(assumes, positive)
+        return (model, var_infos)
 
-            model = self.get_leak_model(assumes, positive)
-            leaks.append((model, var_infos))
-            if len(leaks) >= self.num_leaks: break
-        print("Finished in %.2f" % (time.time() - start_time))
+    def __debug_leaks(self, leaks):
         for i, loc in enumerate(leaks):
             model, acts = loc
             self.__dbg_state(i, model, acts)
+
+    def __collect_masks(self, num_cycles):
+        rand_masks = []
+        for r in self.randoms:
+            for cyc in range(num_cycles):
+                rand_masks.append((r, cyc))
+        return self.masks + rand_masks
+
+    def __check_secure_always(self):
+        leaks = []
+        self.__build_formula()
+        active = self.formula.collect_active_always(self.mode)
+        all_masks = self.__collect_masks(self.cycles)
+        for probe_i, vars_ids in enumerate(itertools.combinations(active, self.order)):
+            all_ids = tuple(set(sum(vars_ids, tuple())))
+            leak = self.__check_tuple(all_ids, all_masks)
+            if leak is None: continue
+            leaks.append(leak)
+            if len(leaks) >= self.num_leaks: break
+        return leaks
+
+    def __check_secure_once(self):
+        leaks = []
+        self.__find_reset()
+        cycle = 0
+        inactive_val = str((self.rst_phase == "0") & 1)
+
+        prev_active = []
+        curr_active = []
+        while (cycle < self.cycles) and self.trace.parse_next_cycle():
+            self.__build_cycle(inactive_val, cycle)
+            all_masks = self.__collect_masks(cycle + 1)
+            prev_active += curr_active
+            curr_active = self.formula.collect_active_once(self.mode, cycle)
+
+            # done checking comb(prev_active, ord) is checked
+            # ...
+            # need to check comb(prev_active, 1) + comb(curr_active, ord)
+            # need to check comb(prev_active, 0) + comb(curr_active, ord)
+            print("Checking cycle %d:" % cycle)
+            for prev_ord in range(0, self.order):
+                curr_ord = self.order - prev_ord
+                for probe_prev_i, prev_vars_ids in enumerate(itertools.combinations(prev_active, prev_ord)):
+                    for probe_curr_i, curr_vars_ids in enumerate(itertools.combinations(curr_active, curr_ord)):
+                        all_ids = tuple(set(sum(prev_vars_ids + curr_vars_ids, tuple())))
+                        leak = self.__check_tuple(all_ids, all_masks)
+                        if leak is None: continue
+                        leaks.append(leak)
+                        if len(leaks) >= self.num_leaks: break
+            cycle += 1
+        return leaks
+
+    def check(self):
+        start_time = time.time()
+        leaks = []
+        if self.probe_duration == ALWAYS:
+            leaks = self.__check_secure_always()
+        else:
+            leaks = self.__check_secure_once()
+        print("Finished in %.2f" % (time.time() - start_time))
+        self.__debug_leaks(leaks)
         return len(leaks) == 0, leaks
