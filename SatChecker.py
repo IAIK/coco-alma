@@ -88,20 +88,10 @@ class Formula:
             self.solver.add_comment("defined %d == %d xor %d" % (gate_vars.id, vars_id1, vars_id2))
             if len(gate_vars.ones) == 0 and len(gate_vars.vars) == 0: return None
             self.prop_var_sets[gate_vars.id] = gate_vars
-            self.symdiff_gate_set(gate_vars.id, vars_id1, vars_id2, symdiff=sd)
-            # self.nonlin_gate_set[gate_vars.id] = (gate_vars.id,)
-            # self.nonlin_set_cache[(gate_vars.id,)] = gate_vars.id
 
-            # if both inputs are biased, this is also a non-linear result
-            if vars_id1 in self.biased_vars and vars_id2 in self.biased_vars:
-                self.biased_vars.add(gate_vars.id)
-                self.biased_cache.add(gate_vars.id)
-                self.biased_cache.discard(vars_id1)
-                self.biased_cache.discard(vars_id2)
-                self.union_gate_set(gate_vars.id, vars_id1, vars_id2)
-            else:
-                self.nonlin_gate_set[gate_vars.id] = (gate_vars.id,)
-                self.nonlin_set_cache[(gate_vars.id,)] = gate_vars.id
+            self.symdiff_gate_set(gate_vars.id, vars_id1, vars_id2, symdiff=sd)
+            self.nonlin_gate_set[gate_vars.id] = (gate_vars.id,)
+            self.nonlin_set_cache[(gate_vars.id,)] = gate_vars.id
             self.biased_cache.discard(vars_id1)
             self.biased_cache.discard(vars_id2)
         else:  # gate_type in NONLINEAR_TYPES
@@ -130,21 +120,15 @@ class Formula:
                                     % (gate_vars.id, vars_id1, vars_id2, biased_id1, biased_id2))
             if len(gate_vars.ones) == 0 and len(gate_vars.vars) == 0: return None
             self.prop_var_sets[gate_vars.id] = gate_vars
+
             self.union_gate_set(gate_vars.id, vars_id1, vars_id2, union=un)
             self.add_cover(gate_vars.id, vars_id1)
             self.add_cover(gate_vars.id, vars_id2)
-
-            # self.linear_gate_set[gate_vars.id] = (gate_vars.id,)
-            # self.linear_set_cache[(gate_vars.id,)] = gate_vars.id
+            self.linear_gate_set[gate_vars.id] = (gate_vars.id,)
+            self.linear_set_cache[(gate_vars.id,)] = gate_vars.id
 
             self.biased_cache.add(gate_vars.id)
             self.biased_vars.add(gate_vars.id)
-
-            if vars_id1 == biased_id1 and vars_id2 == biased_id2:
-                self.symdiff_gate_set(gate_vars.id, vars_id1, vars_id2)
-            else:
-                self.linear_gate_set[gate_vars.id] = (gate_vars.id,)
-                self.linear_set_cache[(gate_vars.id,)] = gate_vars.id
         return gate_vars.id
 
     def collect_active_once(self, mode, cycle):
