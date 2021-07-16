@@ -83,8 +83,8 @@ class CircuitGraph:
 
         # Create all connections
         for cell_bit in self.graph.nodes():
-            # print(cell_bit, ", ".join(["%d %d" % (n, n in self.graph.nodes()) for n in wires[cell_bit]]))
-            assert(all([n in self.graph.nodes() for n in wires[cell_bit]]))
+            for n in wires[cell_bit]:
+                assert(n in self.graph.nodes), "input wire %d of %s is not defined" % (n, self.graph.nodes[cell_bit])
             for in_wire in wires[cell_bit]:
                 self.graph.add_edge(in_wire, cell_bit)
 

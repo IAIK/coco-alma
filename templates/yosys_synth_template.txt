@@ -1,13 +1,9 @@
 {READ_FILES}
-hierarchy -check -top {TOP_MODULE};
-setattr -set keep 1 n:\*;
 
-proc; flatten; opt; memory;  opt; techmap; opt -purge; clean;
+synth -flatten -noabc -top {TOP_MODULE};
 write_verilog -noattr {NETLIST_FILE_PATH};
-
 design -reset; design -reset-vlog;
-read_verilog {NETLIST_FILE_PATH};
-setattr -set keep 1 n:\*;
-proc; techmap; clean;
 
+read_verilog {NETLIST_FILE_PATH};
+proc; techmap; clean;
 write_json {JSON_FILE_PATH};

@@ -51,7 +51,7 @@ python3 %s/verify.py
     --rst-phase 0
     --cycles 23
     --mode transient 
-    --probe-duration always
+    --probe-duration once
 """ % (ALMA_DIR, TMP_DIR, TMP_DIR, AES_DIR)
 
 print(verify)

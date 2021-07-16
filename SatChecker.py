@@ -383,14 +383,13 @@ class SatChecker(object):
             if not stability[node_id]: continue
             if cell.type in REGPORT_TYPES: continue
             preds = self.circuit.predecessors(node_id)
-            # for linear gates, all inputs must be stable
-            if cell.type in LINEAR_TYPES or cell.type == NOT_TYPE:
+            # XOR, XNOR, NOT gates are stable if all inputs are stable
+            # same goes for AND with value 1 and OR with value 0
+            if cell.type in LINEAR_TYPES or cell.type == NOT_TYPE or (
+               cell.type in NONLINEAR_TYPES and curr_val != TRIGGERS[cell.type]):
                 stability[node_id] &= all([stability[p] for p in preds])
-            # for non-linear gates, if the value stays constant
-            # if AND is 1 or OR is 0, then it is already stable because the inputs cant have changed
-            # if AND is 0: it is stable if any input that is 0 is stable
-            # if  OR is 1: it is stable if any input that is 1 is stable
-            # then its stable if any input is stable
+            # if AND is 0, it is stable if any input that is 0 is stable
+            # if OR is 1, it is stable if any input that is 1 is stable
             elif cell.type in NONLINEAR_TYPES and curr_val == TRIGGERS[cell.type]:
                 stability[node_id] = False
                 for p in preds:
@@ -742,7 +741,9 @@ class SatChecker(object):
             r = self.formula.solver.solve(assumes)
             end_time = time.time()
             print("%.2f %.2f" % ((end_time - probe_time), (end_time - start_time)))
-            if not r: continue
+            if not r:
+                self.formula.solver.add_clause([-a for a in assumes])
+                continue
             print("leak")
 
             model = self.get_leak_model(assumes, positive)
