@@ -350,7 +350,16 @@ class SatChecker(object):
         if all(valid):
             if prev[reg] == curr[reg]: return prev[reg]
             self.formula.solver.add_comment("Definition for trans %d %s" % (reg, self.circuit.cells[reg]))
-            return self.formula.make_simple(AND_TYPE, prev[reg], curr[reg])
+            args = tuple(self.formula.prop_var_sets[x] for x in (prev[reg], curr[reg]))
+            res = PropVarSet(choice=args, solver=self.formula.solver)
+            self.formula.prop_var_sets[res.id] = res
+            self.formula.nonlin_gate_set[res.id] = (res.id,)
+            self.formula.linear_gate_set[res.id] = (res.id,)
+            self.formula.nonlin_set_cache[(res.id,)] = res.id
+            self.formula.linear_set_cache[(res.id,)] = res.id
+            self.formula.add_cover(res.id, prev[reg])
+            self.formula.add_cover(res.id, curr[reg])
+            return res.id
         elif valid[0]: return prev[reg]
         elif valid[1]: return curr[reg]
         else: return None
@@ -656,6 +665,7 @@ class SatChecker(object):
                 positive.append(pos)
 
         if trivial or len(positive) == 0: return None, None
+        """
         pos = None
         if len(positive) == 1:
             pos = positive[0]
@@ -663,6 +673,7 @@ class SatChecker(object):
             pos = self.formula.solver.get_var()
             self.formula.solver.add_clauses(make_or_bool(positive, pos))
         act_assumes.append(pos)
+        """
         return act_assumes, positive
 
     def get_leak_model(self, assumes, positive):
@@ -709,8 +720,6 @@ class SatChecker(object):
         if act_assumes is None: return None
 
         assumes = mask_assumes + act_assumes
-        if pvs.activator is not None:
-            assumes.append(pvs.activator)
         if self.probe_duration == ONCE:
             cells = [self.circuit.cells[ai.cell_id] for ai in var_infos]
             fmt_list = ["(cycle %d, %s)" % (vi.cycle, c) for vi, c in zip(var_infos, cells)]
@@ -718,11 +727,17 @@ class SatChecker(object):
             cell_ids = set(ai.cell_id for ai in var_infos)
             cells = [self.circuit.cells[cid] for cid in cell_ids]
             fmt_list = ["%s" % c for c in cells]
-        print("Checking probe", "; ".join(fmt_list), ": ", end="")
         sys.stdout.flush()
-        r = self.formula.solver.solve(assumes)
+        out_fmt = "Checking probe %s: " % "; ".join(fmt_list)
+        for ip, p in enumerate(positive):
+            assumes.append(p)
+            r = self.formula.solver.solve(assumes)
+            print("%s[%d/%d]%s\r" % (out_fmt, ip + 1, len(positive), " " * 10), end="")
+            sys.stdout.flush()
+            if r: break
+            assumes.pop()
         end_time = time.time()
-        print("%.2f" % (end_time - probe_time))
+        print("%s%.2f%s" % (out_fmt, end_time - probe_time, 10 * " "))
         if not r: return None
         model = self.get_leak_model(assumes, positive)
         return (model, var_infos)

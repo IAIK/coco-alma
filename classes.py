@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from defines import inv_cell_enum
-from Solver import Solver, make_xor_bool
+from Solver import Solver, make_xor_bool, make_and_bool_, make_or_bool_
 
 
 @dataclass
@@ -30,36 +30,46 @@ class PropVarSet:
     id:   int       # unique identifier
     vars: dict      # index -> prop
     ones: set       # set of fixed ones
-    activator: int  # activation variable for constraints
 
-    def __init__(self, num=None, biased=None, xor=None, solver=None):
+    def __init__(self, num=None, biased=None, xor=None, choice=None, solver=None):
         self.id = PropVarSet.__counter
         PropVarSet.__counter += 1
 
+        n_good = (num is not None) & 1
+        b_good = (biased is not None) & 1
+        x_good = (xor is not None) & 1
+        c_good = (choice is not None) & 1
+
         # one of the constructors must apply
-        assert(biased is not None or xor is not None or num is not None)
+        assert(n_good + b_good + x_good + c_good != 0)
         # for the complex constructors, solver must be given
-        if biased is not None or xor is not None:
+        if b_good + x_good + c_good != 0:
             assert(solver is not None)
             assert(isinstance(solver, Solver))
         # cannot do both biased and xor constructor
-        assert(biased is None or xor is None)
+        assert(b_good + x_good + c_good <= 1)
 
         # xor constructor requires two compatible arguments
-        if xor is not None:
-            assert(len(xor) == 2)
-            assert(xor[0].__num_vars == xor[1].__num_vars)
-            if num is None: num = xor[0].__num_vars
-            else: assert(num == xor[0].__num_vars)
+        def check_bin(args, num_):
+            assert (len(args) == 2)
+            assert (args[0].__num_vars == args[1].__num_vars)
+            if num_ is None:
+                num_ = args[0].__num_vars
+            else:
+                assert (num_ == args[0].__num_vars)
+            return num_
+
+        if x_good: num = check_bin(xor, num)
+        if c_good: num = check_bin(choice, num)
+
         # biased constructor requires compatible length
-        if biased is not None:
+        if b_good:
             if num is None: num = biased.__num_vars
             else: assert(num == biased.__num_vars)
 
         self.__num_vars = num
         self.vars = {}
         self.ones = set()
-        self.activator = None
 
         if biased is not None:
             # add the condition that (new = old) or (new = 0)
@@ -67,11 +77,6 @@ class PropVarSet:
             # (p -> (a = b)) | (q -> -a) | (p | q)
             # when p = q, then -b is encoded twice, so we replace q with -p
             # (p -> (a = b)) | (-p -> -a)
-
-            if len(biased.vars) != 0:
-                self.activator = solver.get_var()
-                if biased.activator is not None:
-                    solver.add_clause([-self.activator, biased.activator])
 
             assert(len(biased.vars) != 0 or len(biased.ones) != 0)
             p = solver.get_var()
@@ -86,11 +91,49 @@ class PropVarSet:
                 b = biased.vars[i]
                 a = solver.get_var()
                 self.vars[i] = a
-                cls = [[-a, b], [p, -a], [-p, a, -b]]
-                for cl in cls:
-                    cl.append(-self.activator)
-                    solver.add_clause(cl)
-        if xor is not None:
+                solver.add_clauses([[-a, b], [p, -a], [-p, a, -b]])
+
+        if c_good:
+            arg0, arg1 = choice
+            p = solver.get_var()
+            for i in range(self.__num_vars):
+                x, y = arg0[i], arg1[i]
+                # check and simplification
+                if x == "1":
+                    x = -p
+                if y == "1":
+                    y = p
+                # check or simplification
+                if type(x) == int and type(y) == int and x == -y:
+                    self.ones.add(i)
+                    continue
+                # build formula
+                res = None
+                if x == -p or y == p:
+                    if y == "0": res = x
+                    elif x == "0": res = y
+                    else:
+                        res = solver.get_var()
+                        solver.add_clauses(make_or_bool_(x, y, res))
+                else:
+                    x_, y_ = None, None
+                    if x != "0":
+                        x_ = solver.get_var()
+                        solver.add_clauses(make_and_bool_(-p, x, x_))
+                    if y != "0":
+                        y_ = solver.get_var()
+                        solver.add_clauses(make_and_bool_(+p, y, y_))
+                    if x_ is None and y_ is None: continue
+
+                    if x_ is None: res = y_
+                    elif y_ is None: res = x_
+                    else:
+                        res = solver.get_var()
+                        solver.add_clauses(make_or_bool_(x_, y_, res))
+                assert(res is not None)
+                self.vars[i] = res
+
+        if x_good:
             arg0, arg1 = xor
             # print(arg0, arg1)
 
@@ -112,18 +155,8 @@ class PropVarSet:
                 else:
                     assert(tx == int and ty == int), "type mismatch: %s %s ; %s %s" % (x, y, tx, ty)
                     z = solver.get_var()
-                    cls = make_xor_bool(x, y, z)
-                    if self.activator is None:
-                        self.activator = solver.get_var()
-                    for cl in cls:
-                        cl.append(-self.activator)
-                        solver.add_clause(cl)
+                    solver.add_clauses(make_xor_bool(x, y, z))
                     self.vars[i] = z
-            pref = [-self.activator] if self.activator is not None else []
-            if arg0.activator is not None:
-                solver.add_clause(pref + [arg0.activator])
-            if arg1.activator is not None:
-                solver.add_clause(pref + [arg1.activator])
         pass
 
     def __getitem__(self, idx):

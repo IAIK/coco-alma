@@ -151,16 +151,12 @@ def pretty_error(checker, cycle, cell):
         for mode, mstr in zip((stable, trans), ("stable", "trans ")):
             if mode is None or node_id not in mode: continue
             res = checker.formula.model_for_vars(model, mode[node_id])
-
             # generate mappings for signals that contribute to the leak
             pretty_comp = [n for n, v in zip(checker.pretty_names, res) if v == 1]
             initial_comp = [n for n, v in zip(initial, res) if v == 1]
 
-            if(len(pretty_comp) > len(initial_comp)):
-                continue  # random numbers contribute -> ignore the report
-
             print("{} {} {} vars   : {}".format(cycle, mstr, cell, pretty_comp))
-            initial_comp = ["dut.{0}[{1}]".format(*x.split(':')) for x in initial_comp]
+            initial_comp = ["{0}[{1}]".format(*x.split(':')) for x in initial_comp]
             print("{} {} {} signals: {}".format(cycle, mstr, cell, " ^ ".join(initial_comp)))
 
 
