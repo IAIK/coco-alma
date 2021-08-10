@@ -49,6 +49,9 @@ STABLE = "stable"
 ONCE = "once"
 ALWAYS = "always"
 
+STRICT = "strict"
+LOOSE = "loose"
+
 # define label types
 LABEL_SHARE = "secret"
 LABEL_MASK = "mask"

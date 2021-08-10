@@ -131,6 +131,18 @@ class Formula:
             self.biased_vars.add(gate_vars.id)
         return gate_vars.id
 
+    def make_choice(self, arg1, arg2):
+        arg_pvs = tuple(self.prop_var_sets[x] for x in (arg1, arg2))
+        res = PropVarSet(choice=arg_pvs, solver=self.solver)
+        self.prop_var_sets[res.id] = res
+        self.nonlin_gate_set[res.id] = (res.id,)
+        self.linear_gate_set[res.id] = (res.id,)
+        self.nonlin_set_cache[(res.id,)] = res.id
+        self.linear_set_cache[(res.id,)] = res.id
+        self.add_cover(res.id, arg1)
+        self.add_cover(res.id, arg2)
+        return res.id
+
     def collect_active_once(self, mode, cycle):
         node_vars = [self.node_vars_stable, self.node_vars_trans][(mode == TRANSIENT) & 1]
         active = set()
@@ -222,6 +234,7 @@ class SatChecker(object):
         self.cycles = args.cycles
         self.from_cycle = args.from_cycle
         self.mode = args.mode
+        self.glitch_behavior = args.glitch_behavior
         self.probe_duration = args.probe_duration
         self.trace_stable = args.trace_stable
         self.rst_name = args.rst_name
@@ -295,28 +308,27 @@ class SatChecker(object):
         return self.__simple_inherit(type_, preds, curr_vars, info)
 
     # @profile
-    def __proc_stable_mux(self, gate, select, mux_ins, curr_vars, sel_stable=True):
+    def __proc_mux(self, mode, select, mux_ins, curr_vars, sel_stable=True):
         assert(select is not None)
         assert(len(mux_ins) == 2)
-        # Add needed gate variables into mult
-        mult = []
-        others = mux_ins
-        if select in curr_vars.keys():
-            mult.append(curr_vars[select])
-        else:  # select not in curr_vars.keys():
+        if select not in curr_vars.keys() and sel_stable:
             sel_cell = self.circuit.cells[select]
             value = self.trace.get_signal_value(sel_cell.name, sel_cell.pos)
-            if (self.trace_stable or sel_stable) and value in BIN_STR:
-                others = (mux_ins[int(value)],)
-        for x in others: mult.append(curr_vars.get(x))
-        if len(mult) == 0: return None
-        nvars = mult[0]
-        for m in mult[1:]:
-            if nvars is None:
-                nvars = m
-            elif m is not None:
-                nvars = self.formula.make_simple(AND_TYPE, nvars, m)
-        return nvars
+            return curr_vars.get(mux_ins[int(value)])
+
+        vars_ = [curr_vars.get(m) for m in mux_ins]
+        vars_ = [v for v in vars_ if v is not None]
+        res_vars = None
+        if len(vars_) == 1:
+            res_vars = vars_[0]
+        elif len(vars_) == 2:
+            if mode == STABLE or self.glitch_behavior == LOOSE:
+                res_vars = self.formula.make_choice(vars_[0], vars_[1])
+            else:
+                res_vars = self.formula.make_simple(AND_TYPE, vars_[0], vars_[1])
+
+        if select not in curr_vars.keys(): return res_vars
+        return self.formula.make_simple(AND_TYPE, res_vars, curr_vars[select])
 
     # @profile
     def __build_stable(self):
@@ -337,7 +349,7 @@ class SatChecker(object):
                 nvars = target_vars.get(pred0)
             elif cell.type == PORT_TYPE: continue
             elif cell.type == MUX_TYPE:
-                nvars = self.__proc_stable_mux(node_id, cell.select, cell.mux_ins, curr_vars)
+                nvars = self.__proc_mux(STABLE, cell.select, cell.mux_ins, curr_vars)
 
             if nvars is not None: curr_vars[node_id] = nvars
         pass
@@ -350,16 +362,10 @@ class SatChecker(object):
         if all(valid):
             if prev[reg] == curr[reg]: return prev[reg]
             self.formula.solver.add_comment("Definition for trans %d %s" % (reg, self.circuit.cells[reg]))
-            args = tuple(self.formula.prop_var_sets[x] for x in (prev[reg], curr[reg]))
-            res = PropVarSet(choice=args, solver=self.formula.solver)
-            self.formula.prop_var_sets[res.id] = res
-            self.formula.nonlin_gate_set[res.id] = (res.id,)
-            self.formula.linear_gate_set[res.id] = (res.id,)
-            self.formula.nonlin_set_cache[(res.id,)] = res.id
-            self.formula.linear_set_cache[(res.id,)] = res.id
-            self.formula.add_cover(res.id, prev[reg])
-            self.formula.add_cover(res.id, curr[reg])
-            return res.id
+            if self.glitch_behavior == LOOSE:
+                return self.formula.make_choice(prev[reg], curr[reg])
+            else:
+                return self.formula.make_simple(AND_TYPE, prev[reg], curr[reg])
         elif valid[0]: return prev[reg]
         elif valid[1]: return curr[reg]
         else: return None
@@ -423,7 +429,8 @@ class SatChecker(object):
             preds = self.circuit.predecessors(node_id)
             if cell.type in GATE_TYPES:
                 info = {p: ((p not in all_stable_nodes) and (self.trace_stable or stability[p])) for p in preds}
-                nvars = self.__proc_simple(node_id, AND_TYPE, curr_vars, info)
+                type_ = cell.type if (self.glitch_behavior == LOOSE) else AND_TYPE
+                nvars = self.__proc_simple(node_id, type_, curr_vars, info)
             elif cell.type == NOT_TYPE:
                 pred0 = preds.__next__()
                 nvars = curr_vars.get(pred0)
@@ -433,7 +440,7 @@ class SatChecker(object):
                 nvars = curr_stable.get(node_id)
             elif cell.type == MUX_TYPE:
                 sel_stable = (cell.select not in all_stable_nodes) and stability[cell.select]
-                nvars = self.__proc_stable_mux(node_id, cell.select, cell.mux_ins, curr_vars, sel_stable)
+                nvars = self.__proc_mux(TRANSIENT, cell.select, cell.mux_ins, curr_vars, sel_stable)
 
             if nvars is not None: curr_vars[node_id] = nvars
 
@@ -575,6 +582,7 @@ class SatChecker(object):
 
         for node in cone_nodes:
             all_nodes.add(node)
+            if self.circuit.cells[node].type in REGISTER_TYPES: continue
             for i in range(len(preds[node])):
                 p = preds[node][i]
                 all_nodes.add(p)

@@ -40,6 +40,9 @@ def parse_arguments():
     parser.add_argument("-m", "--mode", dest="mode",
                         required=False, default=STABLE, choices=[STABLE, TRANSIENT],
                         help="The verification mode (default: %(default)s)")
+    parser.add_argument("-g", "--glitch-behavior", dest="glitch_behavior",
+                        required=False, default=LOOSE, choices=[STRICT, LOOSE],
+                        help="Determines behavior of glitches. The 'strict' mode is the worst case, 'loose' is more realistic (default: %(default)s)")
     parser.add_argument("-t", "--probe-duration", dest="probe_duration",
                         required=False, default=ONCE, choices=[ONCE, ALWAYS],
                         help="Specifies how a probe records values (default: %(default)s)")
