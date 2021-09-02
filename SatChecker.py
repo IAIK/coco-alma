@@ -14,6 +14,7 @@ class Formula:
         self.num_vars = num_vars     # int
         self.node_vars_stable = []   # cycle -> node -> PropVarSet id
         self.node_vars_trans = []    # cycle -> node -> PropVarSet id
+        self.node_vars_diff = []     # cycle -> node -> PropVarSet id
         self.prop_var_sets = {}      # id -> PropVarSet
         self.linear_gate_set = {}    # vars -> (vars...)
         self.linear_set_cache = {}   # (vars...) -> vars
@@ -36,6 +37,11 @@ class Formula:
         self.solver.add_comment("defined %d as biased %d (%s)" %
                                 (biased_vars.id, vars_id, biased_vars))
         self.prop_var_sets[biased_vars.id] = biased_vars
+        self.nonlin_gate_set[biased_vars.id] = self.nonlin_gate_set[vars_id]
+        self.linear_gate_set[biased_vars.id] = (biased_vars.id,)
+        self.nonlin_set_cache[(biased_vars.id,)] = biased_vars.id
+        self.linear_set_cache[(biased_vars.id,)] = biased_vars.id
+        self.add_cover(biased_vars.id, vars_id)
         return biased_vars.id
 
     def add_cover(self, top, bot):
@@ -132,6 +138,7 @@ class Formula:
         return gate_vars.id
 
     def make_choice(self, arg1, arg2):
+        if arg1 == arg2: return arg1
         arg_pvs = tuple(self.prop_var_sets[x] for x in (arg1, arg2))
         res = PropVarSet(choice=arg_pvs, solver=self.solver)
         self.prop_var_sets[res.id] = res
@@ -143,10 +150,15 @@ class Formula:
         self.add_cover(res.id, arg2)
         return res.id
 
-    def collect_active_once(self, mode, cycle):
-        node_vars = [self.node_vars_stable, self.node_vars_trans][(mode == TRANSIENT) & 1]
+    def collect_active_once(self, mode, glitch_behavior, cycle):
+        node_vars = self.node_vars_stable if (mode == STABLE) else self.node_vars_trans
         active = set()
-        vars = node_vars[cycle]
+        vars = node_vars[cycle].copy()
+        # if mode == TRANSIENT and glitch_behavior == LOOSE:
+        #     for node in vars.keys():
+        #         if node in self.node_vars_diff[cycle]:
+        #             vars[node] = self.make_choice(vars[node], self.node_vars_diff[cycle][node])
+
         for node in vars.keys():
             self.vars_to_info[vars[node]] = VariableInfo(cycle, node)
             if vars[node] in self.covered_bot_vars: continue
@@ -314,6 +326,7 @@ class SatChecker(object):
         if select not in curr_vars.keys() and sel_stable:
             sel_cell = self.circuit.cells[select]
             value = self.trace.get_signal_value(sel_cell.name, sel_cell.pos)
+            assert(value in BIN_STR), "invalid select value is '%s'" % value
             return curr_vars.get(mux_ins[int(value)])
 
         vars_ = [curr_vars.get(m) for m in mux_ins]
@@ -366,9 +379,11 @@ class SatChecker(object):
                 return self.formula.make_choice(prev[reg], curr[reg])
             else:
                 return self.formula.make_simple(AND_TYPE, prev[reg], curr[reg])
-        elif valid[0]: return prev[reg]
-        elif valid[1]: return curr[reg]
-        else: return None
+        elif not any(valid): return None
+
+        signal = prev[reg] if (reg in prev) else curr[reg]
+        biased = self.formula.assure_biased(signal)
+        return biased
 
     @staticmethod
     def get_blocking(nodes, stability, stable_nodes):
@@ -459,7 +474,7 @@ class SatChecker(object):
     def __init_cycle(self, cycle):
         self.formula.node_vars_stable.append({})
         self.formula.node_vars_trans.append({})
-
+        self.formula.node_vars_diff.append({})
         for var_idx, var, in enumerate(self.variables):
             if (self.circuit.cells[var].type in REGISTER_TYPES) and cycle != 0: continue
             self.__init_propvarset(var_idx, var)
@@ -476,6 +491,16 @@ class SatChecker(object):
         assert (len(self.formula.node_vars_stable) == 0)
         assert (len(self.formula.node_vars_trans) == 0)
 
+    def __build_hamming(self):
+        prev_stable = self.formula.node_vars_stable[-2]
+        curr_stable = self.formula.node_vars_stable[-1]
+        curr_diff = self.formula.node_vars_diff[-1]
+        for node_id in prev_stable:
+            if node_id not in curr_stable: continue
+            nvars = self.formula.make_simple(XOR_TYPE, prev_stable[node_id], curr_stable[node_id])
+            if nvars is None: continue
+            curr_diff[node_id] = nvars
+
     def __build_cycle(self, reset, cycle):
         assert (self.trace.get_signal_value(self.rst_name, 0) == reset)
         self.__init_cycle(cycle)
@@ -483,6 +508,8 @@ class SatChecker(object):
         self.__build_stable()
         if self.mode == TRANSIENT:
             self.__build_trans()
+            # if self.glitch_behavior == LOOSE and cycle > 0:
+            #     self.__build_hamming()
         print("vars %d clauses %d" % (self.formula.solver.nof_vars(), self.formula.solver.nof_clauses()))
 
     def __build_formula(self):
@@ -491,6 +518,11 @@ class SatChecker(object):
         inactive_val = str((self.rst_phase == "0") & 1)
 
         while (cycle < self.cycles) and self.trace.parse_next_cycle():
+            try:
+                val = self.trace.get_signal_value("design.RCONxD", None)
+                print("In cycle %d, round const is %02x" % (cycle, int(val, 2)))
+            except:
+                pass
             self.__build_cycle(inactive_val, cycle)
             cycle += 1
         self.cycles = cycle
@@ -787,7 +819,7 @@ class SatChecker(object):
             self.__build_cycle(inactive_val, cycle)
             all_masks = self.__collect_masks(cycle + 1)
             prev_active += curr_active
-            curr_active = self.formula.collect_active_once(self.mode, cycle)
+            curr_active = self.formula.collect_active_once(self.mode, self.glitch_behavior, cycle)
 
             # done checking comb(prev_active, ord) is checked
             # ...
@@ -802,7 +834,7 @@ class SatChecker(object):
                         leak = self.__check_tuple(all_ids, all_masks)
                         if leak is None: continue
                         leaks.append(leak)
-                        if len(leaks) >= self.num_leaks: break
+                        if len(leaks) >= self.num_leaks: return leaks
             cycle += 1
         return leaks
 

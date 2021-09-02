@@ -72,7 +72,8 @@ def parse_arguments():
                         required=True, type=str,
                         help="Name of the top module")
 
-    args, unknown = parser.parse_known_args()
+    args = parser.parse_args()
+    # args, unknown = parser.parse_known_args()
     if args.cycles <= 0:    args.cycles = UINT_MAX
     if args.num_leaks <= 0: args.num_leaks = UINT_MAX
     

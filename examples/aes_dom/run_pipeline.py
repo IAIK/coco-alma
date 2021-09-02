@@ -49,7 +49,7 @@ python3 %s/verify.py
     --label %s/labels.txt 
     --rst-name RstxBI
     --rst-phase 0
-    --cycles 23
+    --cycles 21
     --mode transient 
     --probe-duration once
 """ % (ALMA_DIR, TMP_DIR, TMP_DIR, AES_DIR)

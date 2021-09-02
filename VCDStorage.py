@@ -135,7 +135,7 @@ class VCDStorage:
         # Verilator < 4.106 truncates long signal names
         # assert (signal_name in self.name_to_id), "Signal not found in VCD file"
 
-        if bit_num:
+        if bit_num is not None:
             # Look for the signal incl. the specific index.
             id_name = self.name_to_id.get("{} [{}]".format(signal_name, bit_num), None)
             if id_name:
