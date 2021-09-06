@@ -36,12 +36,12 @@ def parse_arguments():
                         help="Start of verification after reset (default: %(default)s)")
     parser.add_argument("-q", "--order", dest="order",
                         required=False, type=helpers.ap_check_positive, default=1,
-                        help="Verification order, ie the number of probes (default: %(default)s)")
+                        help="Verification order, i.e. the number of probes (default: %(default)s)")
     parser.add_argument("-m", "--mode", dest="mode",
                         required=False, default=STABLE, choices=[STABLE, TRANSIENT],
                         help="The verification mode (default: %(default)s)")
     parser.add_argument("-g", "--glitch-behavior", dest="glitch_behavior",
-                        required=False, default=LOOSE, choices=[STRICT, LOOSE],
+                        required=False, default=STRICT, choices=[STRICT, LOOSE],
                         help="Determines behavior of glitches. The 'strict' mode is the worst case, 'loose' is more realistic (default: %(default)s)")
     parser.add_argument("-t", "--probe-duration", dest="probe_duration",
                         required=False, default=ONCE, choices=[ONCE, ALWAYS],
