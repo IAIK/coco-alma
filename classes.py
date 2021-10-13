@@ -178,6 +178,7 @@ class Cell:
     mux_ins: list = None
     clock: int = None
     reset: int = None
+    preset: int = None
 
     def __lt__(self, other):
         return str(self.name) < str(other.name)

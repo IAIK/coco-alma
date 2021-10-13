@@ -59,10 +59,14 @@ class CircuitGraph:
             reset = None
             if cell_type in REGISTER_TYPES and "R" in connections.keys():
                 reset = connections.pop("R")[0]
+            preset = None
+            if cell_type in REGISTER_TYPES and "S" in connections.keys():
+                preset = connections.pop("S")[0]
 
             # Get the cell ports
             keys = sorted(list(connections.keys()))
             in_ports = [x for x in keys if directions[x] == "input"]
+            assert((cell_type not in REGISTER_TYPES) or len(in_ports) == 1)
             out_ports = [x for x in keys if directions[x] == "output"]
             assert(len(out_ports) == 1)
 
@@ -78,7 +82,7 @@ class CircuitGraph:
             wires[out_wire] = in_wires
             if cell_type == MUX_TYPE: mux_ins = in_wires
             info = bit_info[out_wire]
-            cell = Cell(info[0], cell_type, info[1], select, mux_ins, clock, reset)
+            cell = Cell(info[0], cell_type, info[1], select, mux_ins, clock, reset, preset)
             self.add_cell(out_wire, cell)
 
         # Create all connections

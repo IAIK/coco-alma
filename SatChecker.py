@@ -503,6 +503,7 @@ class SatChecker(object):
 
     def __build_cycle(self, reset, cycle):
         assert (self.trace.get_signal_value(self.rst_name, 0) == reset)
+
         self.__init_cycle(cycle)
         print("Building formula for cycle %d: " % cycle, end="")
         self.__build_stable()
@@ -518,11 +519,6 @@ class SatChecker(object):
         inactive_val = str((self.rst_phase == "0") & 1)
 
         while (cycle < self.cycles) and self.trace.parse_next_cycle():
-            try:
-                val = self.trace.get_signal_value("design.RCONxD", None)
-                print("In cycle %d, round const is %02x" % (cycle, int(val, 2)))
-            except:
-                pass
             self.__build_cycle(inactive_val, cycle)
             cycle += 1
         self.cycles = cycle
@@ -817,6 +813,10 @@ class SatChecker(object):
         curr_active = []
         while (cycle < self.cycles) and self.trace.parse_next_cycle():
             self.__build_cycle(inactive_val, cycle)
+            # for nid in self.circuit.nodes:
+            #     if nid not in self.formula.node_vars_stable[cycle]: continue
+            #     print(self.circuit.cells[nid])
+
             all_masks = self.__collect_masks(cycle + 1)
             prev_active += curr_active
             curr_active = self.formula.collect_active_once(self.mode, self.glitch_behavior, cycle)
