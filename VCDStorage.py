@@ -1,6 +1,7 @@
 from bisect import bisect_left
 import os
 
+import helpers
 from CircuitGraph import CONST_TO_BIT
 CONST_NAMES = {("const_%s" % x) for x in CONST_TO_BIT.keys()}
 DUMMIES = ["$scope", "$upscope", "$enddefinitions", "$date", "$version"]
@@ -64,13 +65,14 @@ class VCDStorage:
             if line[0] in DUMMIES:
                 continue
             elif line[0] == "$var":
-                signal_width, signal_id = line[2:4]
-                if ':' in line[5]:
+                signal_width_str, signal_id = line[2:4]
+                signal_width = int(signal_width_str)
+                if line[5][0] == "[" and line[5][-1] == "]" and ':' in line[5]:
                     # Assumes that signals with a range span the full width and store only the name.
                     # e.g., ['$var', 'reg', '64', ')', 'pt1', '[63:0]', '$end'] -> 'pt1'
                     signal_name = line[4]
-                    assert line[5] in ['[%d:0]' % (int(signal_width)-1), '[0:%d]' % (int(signal_width)-1)], \
-                        "%s:%d: Range does not match full signal width." % (self.vcd_file_path, self.line_nr)
+                    up, down = helpers.get_slice(line[5][1:-1], self.line_nr, None, True)
+                    assert (up - down + 1 == signal_width), "%s:%d Signal width does not match" % (self.vcd_file_path, self.line_nr)
                 else:
                     # Use the remaining components for the signal name.
                     # e.g., ['$var', 'wire', '1', '7', '_00004_', '$end']        -> '_00004_'
@@ -83,7 +85,7 @@ class VCDStorage:
                         self.vcd_file_path, self.line_nr, signal_name, signal_name, self.name_to_id[signal_name]))
                 self.name_to_id[signal_name] = signal_id
                 # print("{}:{}: {} = {}".format(self.vcd_file_path, self.line_nr, signal_name, signal_id))
-                self.id_to_width[signal_id] = int(signal_width)
+                self.id_to_width[signal_id] = signal_width
             elif line[0] == "$timescale":
                 if line[1].isnumeric() and len(line) == 4:
                     # support cadence: ['$timescale', '1', 'ps', '$end']

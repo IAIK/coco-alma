@@ -1,0 +1,3 @@
+# registers: x7, x27
+u_core.register_file_i.rf_reg_reg[224] = secret 0
+u_core.register_file_i.rf_reg_reg[864] = secret 0

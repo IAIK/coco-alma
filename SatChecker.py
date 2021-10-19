@@ -484,10 +484,10 @@ class SatChecker(object):
         for var, var_idx in zip(self.randoms, range(start, start + len(self.randoms))):
             self.__init_propvarset(var_idx, var)
 
-    def __find_reset(self):
+    def __find_reset(self, reset):
         for i in range(self.rst_cycles):
             self.trace.parse_next_cycle()
-            print(self.trace.get_signal_value(self.rst_name, 0))
+            assert(self.trace.get_signal_value(self.rst_name, 0) == reset), "reset duration mismatch"
         assert (len(self.formula.node_vars_stable) == 0)
         assert (len(self.formula.node_vars_trans) == 0)
 
@@ -514,7 +514,7 @@ class SatChecker(object):
         print("vars %d clauses %d" % (self.formula.solver.nof_vars(), self.formula.solver.nof_clauses()))
 
     def __build_formula(self):
-        self.__find_reset()
+        self.__find_reset(self.rst_phase)
         cycle = 0
         inactive_val = str((self.rst_phase == "0") & 1)
 
@@ -805,7 +805,7 @@ class SatChecker(object):
 
     def __check_secure_once(self):
         leaks = []
-        self.__find_reset()
+        self.__find_reset(self.rst_phase)
         cycle = 0
         inactive_val = str((self.rst_phase == "0") & 1)
 

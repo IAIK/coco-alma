@@ -1,0 +1,6 @@
+# registers: x5, x9, x29, x30
+u_core.register_file_i.rf_reg_reg[160] = secret 0
+u_core.register_file_i.rf_reg_reg[288] = mask
+u_core.register_file_i.rf_reg_reg[928] = secret 0
+u_core.register_file_i.rf_reg_reg[960] = mask
+

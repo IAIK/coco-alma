@@ -42,7 +42,7 @@ the main steps.
 
 * Synthesise the `ibex_top` circuit, which includes the coco-ibex core, and memory modules.
 ```bash
-python3 path_to/parse.py -t ibex_top -s \
+python3 path_to/parse.py --keep --top-module ibex_top --source \
     path_to/coco-ibex/rtl/secure.sv \
     path_to/coco-ibex/shared/rtl/ibex_top.v \
     path_to/coco-ibex/syn/syn_out/ibex_current_datetime/generated/ibex_core_netlist.v
@@ -53,18 +53,19 @@ python3 path_to/assemble.py \
     --program program.S \
     --netlist path_to/coco-alma/tmp/circuit.v
 ```
-* Label the memory and registers as explained in the root directory.
+* Label the memory and registers as explained in the root directory. Examples of the labeling files can also be found in `coco-alma/examples/ibex/labels/`.
 * Generate the execution trace for the given program.
 ```bash
 python3 path_to/trace.py \
     --testbench path_to/coco-alma/tmp/verilator_tb.c \
-    --netlist path_to/coco-alma/circuit.v \
-    --output-bin path_to/coco-alma/circuit.elf
+    --netlist path_to/coco-alma/tmp/circuit.v \
+    --output-bin path_to/coco-alma/tmp/circuit.elf
 ```
 * Run the verification script.
 ```bash
 python3 verify.py \
     --json path_to/coco-alma/tmp/circuit.json \
+    --top-module ibex_top \
     --label path_to/coco-alma/tmp/labels.txt \
     --vcd path_to/coco-alma/tmp/circuit.vcd \
     --cycles 5 \

@@ -45,6 +45,9 @@ def parse_arguments():
     parser.add_argument("-l", "--label", dest="label_file_path",
                         required=False, default=LABEL_FILE_PATH, type=helpers.ap_check_dir_exists,
                         help="Path of output label file (default: %(default)s)")
+    parser.add_argument("-k", "--keep", dest="keep", action="store_true",
+                        required=False, default=False,
+                        help="Keep all cells even if yosys would remove them (default: %(default)s)")
     parser.add_argument("-j", "--json", dest="json_file_path",
                         required=False, default=JSON_FILE_PATH, type=helpers.ap_check_dir_exists,
                         help="Path of output JSON file (default: %(default)s)")
@@ -56,6 +59,7 @@ def parse_arguments():
                         help="Path to a custom yosys binary file (default: %(default)s)")
     parser.add_argument("--log-yosys", dest="log_yosys", action="store_true", default=False, required=False,
                         help="Print output of Yosys synthesis process to logfile (default: %(default)s)")
+
 
     args, _ = parser.parse_known_args()
 
@@ -85,6 +89,10 @@ def create_yosys_script(args):
     yosys_script = yosys_script.replace("{JSON_FILE_PATH}", args.json_file_path)
     assert("{NETLIST_FILE_PATH}" in yosys_script)
     yosys_script = yosys_script.replace("{NETLIST_FILE_PATH}", args.netlist_file_path)
+    assert("{KEEP}" in yosys_script)
+    keep_line = "setattr -set keep 1 n:\*;"
+    if not args.keep: keep_line = ""
+    yosys_script = yosys_script.replace("{KEEP}", keep_line)
     with open(SYNTH_FILE_PATH, "w") as f:
         f.write(yosys_script)
 

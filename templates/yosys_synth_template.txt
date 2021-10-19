@@ -1,9 +1,11 @@
 {READ_FILES}
+{KEEP}
 
 synth -flatten -noabc -top {TOP_MODULE};
 write_verilog -noattr {NETLIST_FILE_PATH};
 design -reset; design -reset-vlog;
 
 read_verilog {NETLIST_FILE_PATH};
+{KEEP}
 proc; techmap; clean;
 write_json {JSON_FILE_PATH};

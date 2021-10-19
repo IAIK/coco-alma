@@ -37,16 +37,16 @@ def name_cmp(a, b):
     return na < nb or na == nb and a < b
 
 
-def get_slice(expr, li, max_):
+def get_slice(expr, li, max_, ignore_reverse=False):
     num_top, num_bot = None, None
     if ":" in expr:
-        signal_top, num_bot = [int(x) for x in expr.split(":")]
-        assert (signal_top >= num_bot), "label range inverted in line %d" % li
+        num_top, num_bot = [int(x) for x in expr.split(":")]
+        assert (ignore_reverse or num_top >= num_bot), "label range inverted in line %d" % li
         assert (num_bot >= 0), "label range negative in line %d" % li
-        assert (type(max_) is not int or signal_top < max_), "label range longer than signal in line %d" % li
+        assert (type(max_) is not int or num_top < max_), "label range longer than signal in line %d" % li
     else:
         num_top, num_bot = int(expr), int(expr)
-    return signal_top, num_bot
+    return num_top, num_bot
 
 
 def bit_to_net(module):

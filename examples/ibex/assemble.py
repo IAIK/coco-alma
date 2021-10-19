@@ -5,6 +5,7 @@ import binascii as ba
 
 IBEX_CFG_DIR = os.path.dirname(os.path.realpath(__file__))
 TMP_DIR = "/".join(IBEX_CFG_DIR.split("/")[:-2]) + "/tmp"
+CONFIG = IBEX_CFG_DIR + "/config.json"
 # parsed automatically
 ASM_CMD = None
 OBJDUMP_CMD = None
@@ -24,7 +25,7 @@ def check_dir_exists(dir_path):
         print("ERROR: Directory %s does not exist" % dir_path)
 
 try:
-    with open("config.json", "r") as f:
+    with open(CONFIG, "r") as f:
         opts = json.load(f)
         OBJDUMP_CMD = opts.get("objdump")
         ASM_CMD = opts.get("asm")
@@ -91,7 +92,7 @@ def create_raminit_header(args):
     
     for i in range(0, len(code), MEM_WIDTH):
         x = "0x" + ba.hexlify(code[i:i+MEM_WIDTH][::-1]).decode("ascii")
-        header.write("  tb->m_core->ibex_top__DOT__%s__02Emem__05B%d__05D = %s;\n" % \
+        header.write("  tb->m_core->ibex_top__DOT__%s__02emem__05b%d__05d = %s;\n" % \
                      (MEM_MODULE, i // MEM_WIDTH, x))
     
     # parse data init file with format addr/reg ; value    
@@ -106,12 +107,12 @@ def create_raminit_header(args):
     
     for m in mem:
         addr, val = int(m[0], 0) // MEM_WIDTH, m[1]
-        header.write("  tb->m_core->ibex_top__DOT__u_ram__02Emem__05B%d__05D = %s;\n" % (addr, val))
+        header.write("  tb->m_core->ibex_top__DOT__u_ram__02emem__05b%d__05d = %s;\n" % (addr, val))
     header.write("  tb->reset();\n")
     for r in reg:
         addr, val = r[0][1:], r[1]
-        header.write("  tb->m_core->ibex_top__DOT__u_core__02Eregister_file_i__02Erf"
-                     "_reg_tmp__05B%d__05D = %s;\n" % (addr, val))
+        header.write("  tb->m_core->ibex_top__DOT__u_core__02eregister_file_i__02erf"
+                     "_reg_tmp__05b%d__05d = %s;\n" % (addr, val))
         
     header.write("}\n")
     header.close()
