@@ -1,10 +1,36 @@
-# Alma: Execution-aware Masking Verification
+# CocoAlma: Execution-aware Masking Verification
 
-Alma is an _execution-aware_ tool for formal verification of masked implementations.
-In principle, Alma can verify any data-independent masked computation that can be 
-implemented as a Verilog hardware circuit, with properly labeled secret shares and 
-masks. However, as of now, the focus of Alma is to verify software executions on a
-hardware level. This is also the focus of the related paper [COCO](https://eprint.iacr.org/2020/1294.pdf).
+CocoAlma is an _execution-aware_ tool for formal verification of masked implementations.
+It can verify any data-independent masked computation that can be implemented as a Verilog 
+hardware circuit or as software running on a hardware platform, with properly labeled secret 
+shares, masks and RNG ports. 
+
+For software verification on hardware level, please look at the examples provided for the
+verification of masked software on CocoIbex and the associated paper [COCO](https://eprint.iacr.org/2020/1294.pdf).
+For pure hardware verification of masked designs you can look at the provided examples for
+Prince-TI and AES-DOM, which have very distinct implementations. Here, AES-DOM is implemented
+as a pipeline of cascading state registers, whereas Prince-TI is implemented in a straightforward
+fashion with threshold masking. Consider also looking at the hardware verification paper [CocoAlma](https://pure.tugraz.at/ws/portalfiles/portal/37924631/paper.pdf) for more details.
+
+If you use CocoAlma, please properly cite the following papers:
+```
+@inproceedings{hadzic2021cocoalma,
+  title={COCOALMA: A Versatile Masking Verifier},
+  author={Hadžić, Vedad and Bloem, Roderick},
+  booktitle={Conference on Formal Methods in Computer-aided Design -- FMCAD 2021},
+  year={2021}
+}
+
+@inproceedings{gigerl2021coco,
+  title={Coco: Co-design and co-verification of masked software implementations on CPUs},
+  author={Gigerl, Barbara and Hadžić, Vedad and Primas, Robert and Mangard, Stefan and Bloem, Roderick},
+  booktitle={30th {USENIX} Security Symposium ({USENIX} Security 21)},
+  year={2021}
+}
+```
+
+Below, we provide a set of installation and general usage instructions. 
+Each provided example includes a more specific set of instructions for verifying that example, as well as a script that automates the whole process for you.
 
 ## Setup
 
@@ -61,25 +87,33 @@ The outputs of this step are a label file, the circuit in JSON format and the ne
 
 ### 2. Label the registers and memory in the label file
 
-`labels.txt` lists all registers and memory locations, which can be labeled as `share`, `mask` or `unimportant`.
+`labels.txt` lists all registers and memory locations, which can be labeled as `secret`, `mask` or `random`.
 
 For example, a valid labeling can look like this:
 
 ```
-my_super_cpu.r1:0:17840: unimportant
-my_super_cpu.r1:1:17840: unimportant
-my_super_cpu.r2:0:17841: share 1
-my_super_cpu.r3:0:17563: mask
-my_super_cpu.r4:0:17420: share 1
+# registers
+my_super_cpu.r1 [7:0] = secret 7:0
+my_super_cpu.r2 [7:0] = secret 7:0
+my_super_cpu.r3 [3:0] = mask
+my_super_cpu.r3 [7:4] = secret 11:8
+my_super_cpu.r4 [4:0] = secret 11:8
+# ports
+rng_in [11:0] = random
 ```
 
-The register name follows the format: `display_name:bit:index`, where `display_name` is a mangled 
-name from the original design, `bit` indicates a specific bit in a register, and `index` is the
-global index of the given bit and _not relevant for users_.
+The format of each line is `(display_name) ([range]?) = (purpose) (range?)`
+The register name `display_name` is a mangled name from the original design, 
+`[range]` indicates the range of bits in the signal that you are labeling, 
+`purpose` is either `secret`, `mask` or `random`. When labeling something as
+shares of a secret, you can specify a range of secrets instead, and the individual
+bits of the signal will be associated with the given secret in the range.
+In the example above, the first eight bits of `my_super_cpu.r1` are labeled
+as shares of the first eight secrets. The first eight bits of `my_super_cpu.r2`
+are similarly labeled as second share of first eight secrets. 
 
-You need to label registers and ports that are parts of a secret with `share X` where _X_ is
-the index of the given secret. Random bits are labeled with `mask`, whereas other public values 
-such as control signals and the like are labeled with `unimportant`.
+For your convenience, the exact names you are supposed to use are given in the
+form of a template `labels.txt` that is generated through `parse.py`.
 
 ### 3. Generate an execution trace
 ```
