@@ -261,6 +261,7 @@ class SatChecker(object):
         self.variables = []
         self.var_indexes = {}
         self.pretty_names = []
+        self.debugs = set(args.debugs)
         self.__extract_label_info(labels)
         self.num_vars = len(self.variables) + (self.cycles * len(self.randoms))
         assert (self.num_vars == len(self.pretty_names))
@@ -503,7 +504,13 @@ class SatChecker(object):
 
     def __build_cycle(self, reset, cycle):
         assert (self.trace.get_signal_value(self.rst_name, 0) == reset)
-
+        for dbg_name in self.debugs:
+            try:
+                res = int(self.trace.get_signal_value(dbg_name, None), 2)
+                print("debug: %s = %x" % (dbg_name, res))
+            except Exception as e:
+                print("%s\ncannot find %s" % (e, dbg_name))
+                pass
         self.__init_cycle(cycle)
         print("Building formula for cycle %d: " % cycle, end="")
         self.__build_stable()

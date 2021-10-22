@@ -1,11 +1,13 @@
 {READ_FILES}
-{KEEP}
 
+{KEEP}
 synth -flatten -noabc -top {TOP_MODULE};
+techmap; dffunmap;
+rename -enumerate *; clean;
 write_verilog -noattr {NETLIST_FILE_PATH};
-design -reset; design -reset-vlog;
 
-read_verilog {NETLIST_FILE_PATH};
-{KEEP}
-proc; techmap; clean;
+# design -reset; design -reset-vlog;
+# read_verilog {NETLIST_FILE_PATH};
+# {KEEP}
+# proc; techmap; dffunmap; clean;
 write_json {JSON_FILE_PATH};

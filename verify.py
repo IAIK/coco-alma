@@ -67,7 +67,9 @@ def parse_arguments():
     parser.add_argument("-d", "--dbg-output-dir", dest="dbg_output_dir_path", 
                         required=False, default=TMP_DIR,
                         help="Directory in which debug traces (dbg-label-trace-?.txt, dbg-circuit-?.dot) are written (default: %(default)s)")
-
+    parser.add_argument("-ds", "--dbg-signals", dest="debugs",
+                        required=False, default=[], nargs="+", type=str,
+                        help="List of debug signals whose values should be printed")
     parser.add_argument("--top-module", dest="top_module",
                         required=True, type=str,
                         help="Name of the top module")
