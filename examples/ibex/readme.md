@@ -47,7 +47,7 @@ python3 path_to/parse.py --keep --top-module ibex_top --source \
     path_to/coco-ibex/shared/rtl/ibex_top.v \
     path_to/coco-ibex/syn/syn_out/ibex_current_datetime/generated/ibex_core_netlist.v
 ```
-* Compile RISC-V Program and create the header for the testbench.
+* Compile RISC-V Program and create the header for the testbench. With older variants of Verilator, you might also need to additionally specify `--uppercase` when running the assembler.
 ```bash
 python3 path_to/assemble.py \
     --program program.S \

@@ -10,7 +10,7 @@ CONFIG = IBEX_CFG_DIR + "/config.json"
 ASM_CMD = None
 OBJDUMP_CMD = None
 SECURE_MEM = None      
-MEM_WIDTH = None
+MEM_WIDTH = 1
 MEM_MODULE = None
 INSTR_LIMIT = None
 
@@ -48,6 +48,7 @@ def parse_arguments():
     parser.add_argument('--init-file', dest='init_file_path', required=False, default=None)
     parser.add_argument("--build-dir", dest="build_dir_path", required=False, default=TMP_DIR)
     parser.add_argument("--netlist", dest="netlist_path", required=True)
+    parser.add_argument('--uppercase', dest='uppercase', default=False, action='store_true')
     args = parser.parse_args()
     check_file_exists(args.program_path)
     check_file_exists(args.init_file_path)
@@ -81,7 +82,7 @@ def create_raminit_header(args):
                  stdout=sp.PIPE, stderr=sp.PIPE)
     p.wait()
     print((p.stdout.read() + p.stderr.read()).decode("ascii"))
-    
+
     code = read_objfile(args)
     if len(code) > INSTR_LIMIT * MEM_WIDTH:
         print(".text section is too large (> %d bytes)" % (INSTR_LIMIT * MEM_WIDTH))
@@ -89,11 +90,14 @@ def create_raminit_header(args):
     
     header = open(args.build_dir_path + "/ram_init.h", "w")
     header.write("void load_prog(Testbench<Vcircuit>* tb) {\n")
-    
+
+    mangle = "__%03X" if args.uppercase else "__%03x"
+    mgl = lambda x: (mangle % ord(x))
+
     for i in range(0, len(code), MEM_WIDTH):
         x = "0x" + ba.hexlify(code[i:i+MEM_WIDTH][::-1]).decode("ascii")
-        header.write("  tb->m_core->ibex_top__DOT__%s__02emem__05b%d__05d = %s;\n" % \
-                     (MEM_MODULE, i // MEM_WIDTH, x))
+        header.write(f"  tb->m_core->ibex_top__DOT__{MEM_MODULE}{mgl('.')}"
+                     f"mem{mgl('[')}{i // MEM_WIDTH}{mgl(']')} = {x};\n")
     
     # parse data init file with format addr/reg ; value    
     reg, mem = [], []
@@ -107,12 +111,12 @@ def create_raminit_header(args):
     
     for m in mem:
         addr, val = int(m[0], 0) // MEM_WIDTH, m[1]
-        header.write("  tb->m_core->ibex_top__DOT__u_ram__02emem__05b%d__05d = %s;\n" % (addr, val))
+        header.write(f"  tb->m_core->ibex_top__DOT__u_ram{mgl('.')}mem{mgl('[')}{addr}{mgl(']')} = {val};\n")
     header.write("  tb->reset();\n")
     for r in reg:
         addr, val = r[0][1:], r[1]
-        header.write("  tb->m_core->ibex_top__DOT__u_core__02eregister_file_i__02erf"
-                     "_reg_tmp__05b%d__05d = %s;\n" % (addr, val))
+        header.write(f"  tb->m_core->ibex_top__DOT__u_core{mgl('.')}register_file_i{mgl('.')}"
+                     f"rf_reg_tmp{mgl('[')}{addr}{mgl(']')} = {val};\n")
         
     header.write("}\n")
     header.close()
