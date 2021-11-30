@@ -40,6 +40,9 @@ def parse_arguments():
     parser.add_argument("-c", "--c-compiler", dest="c_compiler",
                         required=False, default=None, choices=[CLANG, GCC],
                         help="C compiler used by Verilator")
+    parser.add_argument("-j", "--make-jobs", dest="make_jobs",
+                        required=False, default=2, type=helpers.ap_check_positive,
+                        help="Number of cores used for the make command")
     parser.add_argument("-o", "--output-bin", dest="output_bin_path",
                         required=False, default=None)
  
@@ -123,9 +126,9 @@ def trace_verilator(args):
 
         print("2: Compiling verilated netlist library")
         if args.c_compiler == CLANG:
-            make_cmd = ["make", "-j", "2", "CXX=%s" % args.cxx_compiler, "-C", obj_dir_path, "-f", "V" + raw_netlist_file_name + ".mk"]
+            make_cmd = ["make", "-j", str(args.make_jobs), "CXX=%s" % args.cxx_compiler, "-C", obj_dir_path, "-f", "V" + raw_netlist_file_name + ".mk"]
         else:
-            make_cmd = ["make", "-j", "2", "-C", obj_dir_path, "-f", "V" + raw_netlist_file_name + ".mk"]
+            make_cmd = ["make", "-j", str(args.make_jobs), "-C", obj_dir_path, "-f", "V" + raw_netlist_file_name + ".mk"]
         check_run(make_cmd, "ERROR: Making verilated library failed.")
 
 
