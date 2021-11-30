@@ -63,7 +63,7 @@ python3 path_to/trace.py \
 ```
 * Run the verification script.
 ```bash
-python3 verify.py \
+python3 path_to/verify.py \
     --json path_to/coco-alma/tmp/circuit.json \
     --top-module ibex_top \
     --label path_to/coco-alma/tmp/labels.txt \
@@ -71,7 +71,7 @@ python3 verify.py \
     --cycles 5 \
     --mode transient \
     --rst-name rst_sys_n \
-    --rst-cycles 4 \
+    --rst-cycles 2 \
     --rst-phase 0 \
 ```
 
