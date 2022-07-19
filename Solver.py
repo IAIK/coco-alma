@@ -27,6 +27,27 @@ class Solver(Cadical):
                         print("c " + line)
             if self.store_clauses:
                 print(" ".join(self.__dbg_clauses[idx]) + " 0")
+                
+    def dbg_print_cnf(self, name, assumes, positive, dbg_output_dir_path):
+        assert(self.store_clauses)
+
+        for ip,p in enumerate(positive):
+            assumes.append(p)
+
+            f = open("%s/formula_%s_%d.cnf"%(dbg_output_dir_path, name, ip), "w")
+
+            header = "p cnf %d %d\n"%(self.__var-1, self.num_clauses+len(assumes))
+            f.write(header)
+
+            for clause in self.__dbg_clauses:
+                cnf_line = "%s 0\n" % (" ".join([str(c) for c in clause]))
+                f.write(cnf_line)
+            
+            for assume in assumes:
+                cnf_line = "%s 0\n" % (assume)
+                f.write(cnf_line)
+            f.close()
+            assumes.pop()
 
     def get_vars_(self, num):
         r = self.__var

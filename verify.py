@@ -70,6 +70,11 @@ def parse_arguments():
     parser.add_argument("-ds", "--dbg-signals", dest="debugs",
                         required=False, default=[], nargs="+", type=str,
                         help="List of debug signals whose values should be printed")
+    parser.add_argument("--export-cnf", dest="export_cnf", action="store_true", help="Export CNF which needs to be solved for each secret to dbg_output_dir. This allows to use other solvers than CaDiCaL, e.g. Kissat." )
+    parser.set_defaults(export_cnf=False)
+    parser.add_argument("--kissat", dest="kissat_bin_path",
+                        required=False, type=helpers.ap_check_file_exists,
+                        help="Path to a the Kissat binary file. Note that for enabling solving with Kissat, you need to set the --export-cnf option.")
     parser.add_argument("--top-module", dest="top_module",
                         required=True, type=str,
                         help="Name of the top module")
@@ -81,6 +86,11 @@ def parse_arguments():
     
     #Unfortunately, ap_check_dir_exists does not work for optional parameters
     helpers.check_dir_exists(args.dbg_output_dir_path) 
+
+    if args.export_cnf == True and args.probe_duration == ONCE:
+        raise argparse.ArgumentTypeError("Cannot export CNF formulas for probe duration once. Please use the --probe-duration always option.")
+    if args.kissat_bin_path != None and args.export_cnf == False:
+        raise argparse.ArgumentTypeError("Cannot use Kissat without exporting CNF formulas. Please use the --export-cnf option." % dir_path)
 
     return args
 
@@ -181,9 +191,13 @@ def main():
 
     status, locations = checker.check()
     leaks = [l[1] for l in locations]
-    if status:
+    if status and not(args.kissat_bin_path):
         print("The execution is secure")
         sys.exit(SECURE)
+    elif args.kissat_bin_path:
+        print("Skipped checking with CaDiCal, using Kissat instead.")
+        result = checker.checkKissat()
+        sys.exit(result)
     else:
         sys.stdout.write("The execution is not secure, here are some leaks:\n")
         for i in range(len(leaks)):

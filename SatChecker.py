@@ -27,7 +27,7 @@ class Formula:
         self.covering_top_vars = {}  # vars -> {vars...}
         self.covered_bot_vars = {}   # {vars...}
         self.vars_to_info = {}       # vars -> (cycle, node)
-        self.solver = Solver(store_clauses=False, store_comments=True)
+        self.solver = Solver(store_clauses=True, store_comments=True)
 
     def assure_biased(self, vars_id):
         if vars_id in self.biased_cache:
@@ -255,6 +255,10 @@ class SatChecker(object):
         self.num_leaks = args.num_leaks
         self.minimize_leaks = args.minimize_leaks
         self.dbg_output_dir_path = args.dbg_output_dir_path
+        self.export_cnf = args.export_cnf
+        self.kissat_bin_path = args.kissat_bin_path
+        if self.kissat_bin_path:
+            self.kissat_dbg_map = {}
         self.masks = []
         self.randoms = []
         self.shares = {}
@@ -741,9 +745,9 @@ class SatChecker(object):
             model = set(self.formula.solver.get_model())
         return model
 
+
     def __check_tuple(self, all_ids, masks):
         var_infos = [self.formula.vars_to_info[vid] for vid in all_ids]
-
         if all(map(lambda x: x.cycle < self.from_cycle, var_infos)): return None
         probe_time = time.time()
 
@@ -770,6 +774,13 @@ class SatChecker(object):
             cell_ids = set(ai.cell_id for ai in var_infos)
             cells = [self.circuit.cells[cid] for cid in cell_ids]
             fmt_list = ["%s" % c for c in cells]
+        
+        if self.export_cnf:
+            self.formula.solver.dbg_print_cnf("_".join(set(str(ai.cell_id) for ai in var_infos)), list(assumes), list(positive), self.dbg_output_dir_path)
+            if self.kissat_bin_path:
+                self.kissat_dbg_map["_".join(set(str(ai.cell_id) for ai in var_infos))] = var_infos
+                return None
+
         sys.stdout.flush()
         out_fmt = "Checking probe %s: " % "; ".join(fmt_list)
         for ip, p in enumerate(positive):
@@ -855,3 +866,58 @@ class SatChecker(object):
         print("Finished in %.2f" % (time.time() - start_time))
         self.__debug_leaks(leaks)
         return len(leaks) == 0, leaks
+
+    def checkKissat(self):
+        import subprocess as sp
+
+        for cnf_file in os.listdir(self.dbg_output_dir_path):
+            if cnf_file.endswith(".cnf"):
+                kissat_log_file = open(self.dbg_output_dir_path + "/kissat.log", "w")
+                cnf_file_path = os.path.join(self.dbg_output_dir_path, cnf_file)
+                print("Solving %s..."%(cnf_file), end="")
+                args = [self.kissat_bin_path, "--unsat", cnf_file_path]
+                p = sp.Popen(args, stdout=kissat_log_file)
+                p.communicate()
+                kissat_log_file.close()
+                if p.returncode == 10:
+                    # SAT
+                    print("Found leak. The execution is not secure.")
+                    filename = cnf_file.replace("formula_", "").replace(".cnf", "")
+                    filename = filename.split("_")[0:-1]
+                    filename = "_".join(filename)
+
+                    leaks = [self.kissat_dbg_map[filename]]
+                    for i in range(len(leaks)):
+                        gates = leaks[i]
+                        sys.stdout.write("leak %d: " % i)
+                        for g in gates:
+                            cell = self.circuit.cells[g.cell_id]
+                            sys.stdout.write("(cycle: %d, cell: %s, id: %d) " % (g.cycle, cell, g.cell_id))
+                        sys.stdout.write("\n")
+                    
+                    # model = set()
+                    # kissat_log_file = open(self.dbg_output_dir_path + "/kissat.log", "r")
+                    # for l in kissat_log_file:
+                    #     if l.startswith("v"):
+                    #         # Remove 'v' and '\n'
+                    #         l = l[:-1]
+                    #         l = l.split(" ")
+                    #         l = l[1:]
+
+                    #         terms = [int(_) for _ in l]
+                    #         model.update(terms)
+
+
+
+                    #kissat_log_file.close()
+
+
+
+                    return -1
+                elif p.returncode == 20:
+                    print("OK")
+                    # UNSAT
+                    pass
+        return 0
+                
+

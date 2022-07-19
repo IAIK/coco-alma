@@ -148,6 +148,9 @@ Special arguments include:
   * `--rst-phase`: Value of the reset signal which triggers the reset. Default: 1
   * `--num-leaks`: Number of leakage locations to be reported if the circuit is insecure. Default: 1
   * `--dbg-output-dir`: Directory in which debug traces (dbg-label-trace-?.txt, dbg-circuit-?.dot) are written. Default: `alma/tmp/`
+  * `--export-cnf`: Export CNF which needs to be solved for each secret to dbg_output_dir. This allows to use other solvers than CaDiCaL, e.g. Kissat.
+  * `--kissat`: Path to a the Kissat binary file. Note that for enabling solving with Kissat, you need to set the `--export-cnf` option.
+
 
 ## Resources
 
