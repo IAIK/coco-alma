@@ -480,10 +480,21 @@ class SatChecker(object):
         self.formula.node_vars_stable.append({})
         self.formula.node_vars_trans.append({})
         self.formula.node_vars_diff.append({})
+        assert(len(self.formula.node_vars_stable) == (cycle+1))
+
+        #variable = mask + shares
         for var_idx, var, in enumerate(self.variables):
             if (self.circuit.cells[var].type in REGISTER_TYPES) and cycle != 0: continue
-            self.__init_propvarset(var_idx, var)
+            if cycle == 0:
+                self.__init_propvarset(var_idx, var)
+            else:
+                # reuse
+                assert(var in self.formula.node_vars_stable[cycle-1])
+                gate_vars_id = self.formula.node_vars_stable[cycle-1][var]
+                self.formula.node_vars_stable[-1][var] = gate_vars_id
+                self.formula.node_vars_trans[-1][var] = gate_vars_id
 
+        #randoms = randoms
         start = len(self.variables) + cycle * len(self.randoms)
         assert (start + len(self.randoms) <= self.num_vars)
         for var, var_idx in zip(self.randoms, range(start, start + len(self.randoms))):
@@ -507,6 +518,8 @@ class SatChecker(object):
             curr_diff[node_id] = nvars
 
     def __build_cycle(self, reset, cycle):
+        print("RST value: ", self.trace.get_signal_value(self.rst_name, 0))
+        print(reset)
         assert (self.trace.get_signal_value(self.rst_name, 0) == reset)
         for dbg_name in self.debugs:
             try:
