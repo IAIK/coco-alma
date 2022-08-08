@@ -5,9 +5,6 @@ name: Cocoalma
 
 on:
   push:
-    branches: [ $default-branch ]
-  pull_request:
-    branches: [ $default-branch ]
   workflow_dispatch:
 
 jobs:
@@ -51,10 +48,14 @@ jobs:
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide 
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
+      id: cocoalma-pytest
       run: |
         python -m pytest -s test/basicTest.py --html=report.html --self-contained-html --durations=0
-    - name: Download all workflow run artifacts
-      if: success() || failure()
-      uses: actions/download-artifact@v3
+    - name: Upload all workflow run artifacts
+      if: failure() || success()
+      uses: actions/upload-artifact@v3
+      with:
+        path: report.html
+    
 
   
