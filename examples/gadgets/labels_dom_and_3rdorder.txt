@@ -1,0 +1,30 @@
+# inputs:
+clk_i = unimportant
+rst_i = unimportant
+X0_i [7:0] = secret 7:0
+X1_i [7:0] = secret 7:0
+X2_i [7:0] = secret 7:0
+X3_i [7:0] = secret 7:0
+Y0_i [7:0] = secret 15:8
+Y1_i [7:0] = secret 15:8
+Y2_i [7:0] = secret 15:8
+Y3_i [7:0] = secret 15:8
+Z0_i [7:0] = mask
+Z1_i [7:0] = mask
+Z2_i [7:0] = mask
+Z3_i [7:0] = mask
+Z4_i [7:0] = mask
+Z5_i [7:0] = mask
+# registers:
+AX_CY_Z1_q [7:0] = unimportant
+DX_AY_Z3_q [7:0] = unimportant
+AX_BY_Z0_q [7:0] = unimportant
+CX_AY_Z1_q [7:0] = unimportant
+CX_BY_Z2_q [7:0] = unimportant
+CX_DY_Z5_q [7:0] = unimportant
+DX_CY_Z5_q [7:0] = unimportant
+BX_AY_Z0_q [7:0] = unimportant
+AX_DY_Z3_q [7:0] = unimportant
+BX_DY_Z4_q [7:0] = unimportant
+BX_CY_Z2_q [7:0] = unimportant
+DX_BY_Z4_q [7:0] = unimportant

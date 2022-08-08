@@ -13,7 +13,6 @@ module DOM_and (clk_i, rst_i,
     input [31:0] Z_i;
     output [31:0] Q0_o; 
     output [31:0] Q1_o; 
-
     //Same domain
     wire [31:0] X0_Y0;
     wire [31:0] X1_Y1;

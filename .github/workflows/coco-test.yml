@@ -1,0 +1,56 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Cocoalma
+
+on:
+  push:
+    branches: [ $default-branch ]
+  pull_request:
+    branches: [ $default-branch ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8"]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install libtcl8.6
+        URL="https://github.com/yosyshq/oss-cad-suite-build/releases/download/bucket-linux-x64/linux-x64-yosys.tgz"
+        if wget --spider "${URL}" 2>/dev/null; then
+          wget -qO- "${URL}" | tar xvfz -
+        else
+          echo "Previous version not found in bucket"
+        fi
+        _outputs/linux-x64/yosys/yosyshq/bin/yosys --version   
+
+        sudo apt-get install -y verilator 
+
+        python -m pip install --upgrade pip
+        python -m pip install flake8 pytest pytest-timeout pytest-html
+        python -m pip install networkx==2.4
+        python -m pip install python-sat==0.1.7.dev10
+        python -m pip install wheel
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide 
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Test with pytest
+      run: |
+        python -m pytest -s test/basicTest.py --html=report.html --self-contained-html --durations=0
+    - name: Download all workflow run artifacts
+      uses: actions/download-artifact@v3

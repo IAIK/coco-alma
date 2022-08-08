@@ -8,6 +8,7 @@ import pickle
 import networkx as nx
 from classes import ActiveInfo, VariableInfo, PropVarSet
 from Solver import *
+import dbg
 
 class Formula:
     def __init__(self, num_vars):
@@ -29,6 +30,8 @@ class Formula:
         self.vars_to_info = {}       # vars -> (cycle, node)
         self.solver = Solver(store_clauses=True, store_comments=True)
 
+        self.dbg_defmap = {}
+
     def assure_biased(self, vars_id):
         if vars_id in self.biased_cache:
             self.biased_cache.remove(vars_id)
@@ -41,6 +44,8 @@ class Formula:
         self.linear_gate_set[biased_vars.id] = (biased_vars.id,)
         self.nonlin_set_cache[(biased_vars.id,)] = biased_vars.id
         self.linear_set_cache[(biased_vars.id,)] = biased_vars.id
+        self.dbg_defmap[biased_vars.id] = vars_id
+
         self.add_cover(biased_vars.id, vars_id)
         return biased_vars.id
 
@@ -92,6 +97,9 @@ class Formula:
             xor_args = tuple(self.prop_var_sets[x] for x in (vars_id1, vars_id2))
             gate_vars = PropVarSet(xor=xor_args, solver=self.solver)
             self.solver.add_comment("defined %d == %d xor %d" % (gate_vars.id, vars_id1, vars_id2))
+
+            self.dbg_defmap[gate_vars.id] = (vars_id1, "xor", vars_id2)
+
             if len(gate_vars.ones) == 0 and len(gate_vars.vars) == 0: return None
             self.prop_var_sets[gate_vars.id] = gate_vars
 
@@ -124,6 +132,9 @@ class Formula:
             gate_vars = PropVarSet(xor=xor_args, solver=self.solver)
             self.solver.add_comment("defined %d == %d and %d (%d xor %d)"
                                     % (gate_vars.id, vars_id1, vars_id2, biased_id1, biased_id2))
+            
+            self.dbg_defmap[gate_vars.id] = (vars_id1, "and", vars_id2)
+
             if len(gate_vars.ones) == 0 and len(gate_vars.vars) == 0: return None
             self.prop_var_sets[gate_vars.id] = gate_vars
 
@@ -266,6 +277,7 @@ class SatChecker(object):
         self.var_indexes = {}
         self.pretty_names = []
         self.debugs = set(args.debugs)
+        self.dbg_exact_formula = args.dbg_exact_formula
         self.__extract_label_info(labels)
         self.num_vars = len(self.variables) + (self.cycles * len(self.randoms))
         assert (self.num_vars == len(self.pretty_names))
@@ -487,6 +499,11 @@ class SatChecker(object):
             if (self.circuit.cells[var].type in REGISTER_TYPES) and cycle != 0: continue
             if cycle == 0:
                 self.__init_propvarset(var_idx, var)
+
+                # DEBUG
+                gate_vars_id = self.formula.node_vars_stable[-1][var]
+                self.formula.dbg_defmap[gate_vars_id] = (self.pretty_names[var_idx])
+
             else:
                 # reuse
                 assert(var in self.formula.node_vars_stable[cycle-1])
@@ -535,6 +552,11 @@ class SatChecker(object):
             self.__build_trans()
             # if self.glitch_behavior == LOOSE and cycle > 0:
             #     self.__build_hamming()
+
+        #DEBUG
+        if self.dbg_exact_formula:
+            self.dbgLabelsStable.dbg_print_labels(self.formula.node_vars_stable[cycle], self.formula.dbg_defmap, self.circuit.cells, cycle)
+
         print("vars %d clauses %d" % (self.formula.solver.nof_vars(), self.formula.solver.nof_clauses()))
 
     def __build_formula(self):
@@ -823,6 +845,11 @@ class SatChecker(object):
 
     def __check_secure_always(self):
         leaks = []
+        
+        #DEBUG
+        if self.dbg_exact_formula:
+            self.dbgLabelsStable = dbg.DbgLabels(self.dbg_output_dir_path + "/dbgLabelsStable")
+
         self.__build_formula()
         active = self.formula.collect_active_always(self.mode)
         all_masks = self.__collect_masks(self.cycles)
@@ -842,6 +869,10 @@ class SatChecker(object):
 
         prev_active = []
         curr_active = []
+        
+        if self.dbg_exact_formula:
+            self.dbgLabelsStable = dbg.DbgLabels(self.dbg_output_dir_path + "/dbgLabelsStable")
+
         while (cycle < self.cycles) and self.trace.parse_next_cycle():
             self.__build_cycle(inactive_val, cycle)
             # for nid in self.circuit.nodes:

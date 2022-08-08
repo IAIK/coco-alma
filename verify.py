@@ -70,6 +70,10 @@ def parse_arguments():
     parser.add_argument("-ds", "--dbg-signals", dest="debugs",
                         required=False, default=[], nargs="+", type=str,
                         help="List of debug signals whose values should be printed")
+
+    parser.add_argument("--dbg-exact-formula", action="store_true", dest="dbg_exact_formula", help="For each node, print exact formula.")
+    parser.set_defaults(dbg_exact_formula=False)
+
     parser.add_argument("--export-cnf", dest="export_cnf", action="store_true", help="Export CNF which needs to be solved for each secret to dbg_output_dir. This allows to use other solvers than CaDiCaL, e.g. Kissat." )
     parser.set_defaults(export_cnf=False)
     parser.add_argument("--kissat", dest="kissat_bin_path",
