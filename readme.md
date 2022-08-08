@@ -87,7 +87,7 @@ The outputs of this step are a label file, the circuit in JSON format and the ne
 
 ### 2. Label the registers and memory in the label file
 
-`labels.txt` lists all registers and memory locations, which can be labeled as `secret`, `mask` or `random`.
+`labels.txt` lists all registers and memory locations, which can be labeled as `secret`, `static_random` or `volatile_random`.
 
 For example, a valid labeling can look like this:
 
@@ -95,17 +95,17 @@ For example, a valid labeling can look like this:
 # registers
 my_super_cpu.r1 [7:0] = secret 7:0
 my_super_cpu.r2 [7:0] = secret 7:0
-my_super_cpu.r3 [3:0] = mask
+my_super_cpu.r3 [3:0] = static_random
 my_super_cpu.r3 [7:4] = secret 11:8
 my_super_cpu.r4 [4:0] = secret 11:8
 # ports
-rng_in [11:0] = random
+rng_in [11:0] = volatile_random
 ```
 
 The format of each line is `(display_name) ([range]?) = (purpose) (range?)`
 The register name `display_name` is a mangled name from the original design, 
 `[range]` indicates the range of bits in the signal that you are labeling, 
-`purpose` is either `secret`, `mask` or `random`. When labeling something as
+`purpose` is either `secret`, `static_random` or `volatile_random`. When labeling something as
 shares of a secret, you can specify a range of secrets instead, and the individual
 bits of the signal will be associated with the given secret in the range.
 In the example above, the first eight bits of `my_super_cpu.r1` are labeled
@@ -141,7 +141,7 @@ Special arguments include:
   * `--cycles`: The verification process will run until the end of the VCD trace per default (-1). In case it should abort earlier, this option can be used.
   * `--order`: Verification order, i.e., the number of probes. Default: 1
   * `--mode`: Verification can be done for the stable or transient case. Default: stable
-  * `--probe-duration`: Specifies how a long probe records values. Default: once
+  * `--probing-model`: Specifies whether to use the classic or time-constrained probing model. Default: time-constrained
   * `--trace-stable`: If specified, trace signals are assumed to be stable
   * `--rst-name`: Verification will start after the circuit reset is over. This is the name of the reset signal. Default: `rst_i`
   * `--rst-cycles`: Duration of the system reset in cycles. Default: 2

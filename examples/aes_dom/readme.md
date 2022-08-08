@@ -65,7 +65,7 @@ python3 verify.py \
     --rst-phase 0 \
     --cycles 23 \
     --mode transient \
-    --probe-duration always
+    --probing-model classic
 ```
 
 You can customize most of the artefact file locations generated during this process and then need to

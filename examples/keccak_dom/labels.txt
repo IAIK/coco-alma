@@ -11,7 +11,7 @@ D0_i [31:0] = secret 127:96
 D1_i [31:0] = secret 127:96
 E0_i [31:0] = secret 159:128
 E1_i [31:0] = secret 159:128
-rand_i [31:0] = mask
+rand_i [31:0] = static_random
 # registers:
 dom_and1.X0_Y1_Z [31:0] = unimportant
 dom_and0.X1_Y0_Z [31:0] = unimportant

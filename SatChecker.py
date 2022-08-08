@@ -161,7 +161,7 @@ class Formula:
         self.add_cover(res.id, arg2)
         return res.id
 
-    def collect_active_once(self, mode, glitch_behavior, cycle):
+    def collect_active_time_constrained(self, mode, glitch_behavior, cycle):
         node_vars = self.node_vars_stable if (mode == STABLE) else self.node_vars_trans
         active = set()
         vars = node_vars[cycle].copy()
@@ -176,7 +176,7 @@ class Formula:
             active.add(vars[node])
         return [(x,) for x in sorted(active)]
 
-    def collect_active_always(self, mode):
+    def collect_active_classic(self, mode):
         node_vars = [self.node_vars_stable, self.node_vars_trans][(mode == TRANSIENT) & 1]
         active = set()
         for cycle, vars in enumerate(node_vars):
@@ -250,7 +250,7 @@ class SatChecker(object):
 
         self.circuit = safe_graph
 
-        assert(args.probe_duration != ALWAYS or args.cycles != UINT_MAX)
+        assert(args.probing_model != CLASSIC or args.cycles != UINT_MAX)
         self.labels = labels
         self.trace = trace
         self.order = args.order
@@ -258,7 +258,7 @@ class SatChecker(object):
         self.from_cycle = args.from_cycle
         self.mode = args.mode
         self.glitch_behavior = args.glitch_behavior
-        self.probe_duration = args.probe_duration
+        self.probing_model = args.probing_model
         self.trace_stable = args.trace_stable
         self.rst_name = args.rst_name
         self.rst_cycles = args.rst_cycles
@@ -270,8 +270,8 @@ class SatChecker(object):
         self.kissat_bin_path = args.kissat_bin_path
         if self.kissat_bin_path:
             self.kissat_dbg_map = {}
-        self.masks = []
-        self.randoms = []
+        self.static_randoms = []
+        self.volatile_randoms = []
         self.shares = {}
         self.variables = []
         self.var_indexes = {}
@@ -279,7 +279,7 @@ class SatChecker(object):
         self.debugs = set(args.debugs)
         self.dbg_exact_formula = args.dbg_exact_formula
         self.__extract_label_info(labels)
-        self.num_vars = len(self.variables) + (self.cycles * len(self.randoms))
+        self.num_vars = len(self.variables) + (self.cycles * len(self.volatile_randoms))
         assert (self.num_vars == len(self.pretty_names))
 
         self.formula = Formula(self.num_vars)
@@ -288,10 +288,10 @@ class SatChecker(object):
         for label_id in labels.keys():
             label = labels[label_id]
             if label.type == LABEL_OTHER: continue
-            if label.type == LABEL_RANDOM: continue
-            if label.type == LABEL_MASK:
-                self.pretty_names.append("m%d" % len(self.masks))
-                self.masks.append(label.bit)
+            if label.type == LABEL_VOLATILE_RANDOM: continue
+            if label.type == LABEL_STATIC_RANDOM:
+                self.pretty_names.append("m%d" % len(self.static_randoms))
+                self.static_randoms.append(label.bit)
             if label.type == LABEL_SHARE:
                 if label.num not in self.shares.keys():
                     self.shares[label.num] = []
@@ -302,14 +302,14 @@ class SatChecker(object):
         pnames = []
         for label_id in labels.keys():
             label = labels[label_id]
-            if label.type == LABEL_RANDOM:
-                pnames.append("r%d" % len(self.randoms))
-                self.randoms.append(label.bit)
-        if len(self.randoms) == 0: return
+            if label.type == LABEL_VOLATILE_RANDOM:
+                pnames.append("r%d" % len(self.volatile_randoms))
+                self.volatile_randoms.append(label.bit)
+        if len(self.volatile_randoms) == 0: return
         for i in range(self.cycles):
             self.pretty_names += ["%s:%d" % (p, i) for p in pnames]
-            for idx, r in enumerate(self.randoms):
-                self.var_indexes[(r, i)] = len(self.variables) + i * len(self.randoms) + idx
+            for idx, r in enumerate(self.volatile_randoms):
+                self.var_indexes[(r, i)] = len(self.variables) + i * len(self.volatile_randoms) + idx
 
     # @profile
     def __simple_inherit(self, type_, preds, curr_vars, info):
@@ -385,7 +385,7 @@ class SatChecker(object):
         pass
 
     def __proc_trans_reg(self, reg, prev, curr):
-        if self.probe_duration == ALWAYS:
+        if self.probing_model == CLASSIC:
             return curr.get(reg)
         # in the case it only records ONCE, handle transition leakage
         valid = [(reg in x) for x in (prev.keys(), curr.keys())]
@@ -494,7 +494,7 @@ class SatChecker(object):
         self.formula.node_vars_diff.append({})
         assert(len(self.formula.node_vars_stable) == (cycle+1))
 
-        #variable = mask + shares
+        #variable = static_randoms + shares
         for var_idx, var, in enumerate(self.variables):
             if (self.circuit.cells[var].type in REGISTER_TYPES) and cycle != 0: continue
             if cycle == 0:
@@ -512,9 +512,9 @@ class SatChecker(object):
                 self.formula.node_vars_trans[-1][var] = gate_vars_id
 
         #randoms = randoms
-        start = len(self.variables) + cycle * len(self.randoms)
-        assert (start + len(self.randoms) <= self.num_vars)
-        for var, var_idx in zip(self.randoms, range(start, start + len(self.randoms))):
+        start = len(self.variables) + cycle * len(self.volatile_randoms)
+        assert (start + len(self.volatile_randoms) <= self.num_vars)
+        for var, var_idx in zip(self.volatile_randoms, range(start, start + len(self.volatile_randoms))):
             self.__init_propvarset(var_idx, var)
 
     def __find_reset(self, reset):
@@ -802,7 +802,7 @@ class SatChecker(object):
         if act_assumes is None: return None
 
         assumes = mask_assumes + act_assumes
-        if self.probe_duration == ONCE:
+        if self.probing_model == TIME_CONSTRAINED:
             cells = [self.circuit.cells[ai.cell_id] for ai in var_infos]
             fmt_list = ["(cycle %d, %s)" % (vi.cycle, c) for vi, c in zip(var_infos, cells)]
         else:
@@ -837,13 +837,13 @@ class SatChecker(object):
             self.__dbg_state(i, model, acts)
 
     def __collect_masks(self, num_cycles):
-        rand_masks = []
-        for r in self.randoms:
+        cycle_volatile_randoms = []
+        for r in self.volatile_randoms:
             for cyc in range(num_cycles):
-                rand_masks.append((r, cyc))
-        return self.masks + rand_masks
+                cycle_volatile_randoms.append((r, cyc))
+        return self.static_randoms + cycle_volatile_randoms
 
-    def __check_secure_always(self):
+    def __check_secure_classic(self):
         leaks = []
         
         #DEBUG
@@ -851,7 +851,7 @@ class SatChecker(object):
             self.dbgLabelsStable = dbg.DbgLabels(self.dbg_output_dir_path + "/dbgLabelsStable")
 
         self.__build_formula()
-        active = self.formula.collect_active_always(self.mode)
+        active = self.formula.collect_active_classic(self.mode)
         all_masks = self.__collect_masks(self.cycles)
         for probe_i, vars_ids in enumerate(itertools.combinations(active, self.order)):
             all_ids = tuple(set(sum(vars_ids, tuple())))
@@ -861,7 +861,7 @@ class SatChecker(object):
             if len(leaks) >= self.num_leaks: break
         return leaks
 
-    def __check_secure_once(self):
+    def __check_secure_time_constrained(self):
         leaks = []
         self.__find_reset(self.rst_phase)
         cycle = 0
@@ -881,7 +881,7 @@ class SatChecker(object):
 
             all_masks = self.__collect_masks(cycle + 1)
             prev_active += curr_active
-            curr_active = self.formula.collect_active_once(self.mode, self.glitch_behavior, cycle)
+            curr_active = self.formula.collect_active_time_constrained(self.mode, self.glitch_behavior, cycle)
 
             # done checking comb(prev_active, ord) is checked
             # ...
@@ -903,10 +903,10 @@ class SatChecker(object):
     def check(self):
         start_time = time.time()
         leaks = []
-        if self.probe_duration == ALWAYS:
-            leaks = self.__check_secure_always()
+        if self.probing_model == CLASSIC:
+            leaks = self.__check_secure_classic()
         else:
-            leaks = self.__check_secure_once()
+            leaks = self.__check_secure_time_constrained()
         print("Finished in %.2f" % (time.time() - start_time))
         self.__debug_leaks(leaks)
         return len(leaks) == 0, leaks

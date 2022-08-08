@@ -1,5 +1,5 @@
 # registers: x30, x27, x12, x24
-u_core.register_file_i.rf_reg_reg[960] = mask
-u_core.register_file_i.rf_reg_reg[864] = mask
-u_core.register_file_i.rf_reg_reg[384] = mask
-u_core.register_file_i.rf_reg_reg[768] = mask
+u_core.register_file_i.rf_reg_reg[960] = static_random
+u_core.register_file_i.rf_reg_reg[864] = static_random
+u_core.register_file_i.rf_reg_reg[384] = static_random
+u_core.register_file_i.rf_reg_reg[768] = static_random

@@ -51,7 +51,7 @@ python3 %s/verify.py
     --rst-phase 0
     --cycles 21
     --mode transient 
-    --probe-duration once
+    --probing-model time-constrained
 """ % (ALMA_DIR, TMP_DIR, TMP_DIR, AES_DIR)
 
 print(verify)

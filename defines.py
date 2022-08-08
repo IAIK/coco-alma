@@ -46,18 +46,18 @@ UINT_MAX = 0xffffffffff
 TRANSIENT = "transient"
 STABLE = "stable"
 
-ONCE = "once"
-ALWAYS = "always"
+TIME_CONSTRAINED = "time-constrained"
+CLASSIC = "classic"
 
 STRICT = "strict"
 LOOSE = "loose"
 
 # define label types
 LABEL_SHARE = "secret"
-LABEL_MASK = "mask"
-LABEL_RANDOM = "random"
+LABEL_STATIC_RANDOM = "static_random"
+LABEL_VOLATILE_RANDOM = "volatile_random"
 LABEL_OTHER = "unimportant"
-LABEL_TYPES = (LABEL_SHARE, LABEL_MASK, LABEL_RANDOM, LABEL_OTHER)
+LABEL_TYPES = (LABEL_SHARE, LABEL_STATIC_RANDOM, LABEL_VOLATILE_RANDOM, LABEL_OTHER)
 
 LABEL_FORMAT_BIT = "%s = %s\n"
 LABEL_FORMAT_SLICE = "%s [%d:%d] = %s\n"

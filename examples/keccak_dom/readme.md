@@ -43,5 +43,5 @@ python3 verify.py \
     --cycles 3 \
     --mode transient \
     --rst-name i_reset \
-    --probe-duration once
+    --probing-model time-constrained
 ```

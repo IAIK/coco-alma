@@ -5,5 +5,5 @@ X0_i [7:0] = secret 7:0
 X1_i [7:0] = secret 7:0
 Y0_i [7:0] = secret 15:8
 Y1_i [7:0] = secret 15:8
-R01_i [7:0] = mask
+R01_i [7:0] = static_random
 # registers:

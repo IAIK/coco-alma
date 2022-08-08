@@ -7,9 +7,9 @@ X2_i [7:0] = secret 7:0
 Y0_i [7:0] = secret 15:8
 Y1_i [7:0] = secret 15:8
 Y2_i [7:0] = secret 15:8
-Z0_i [7:0] = mask
-Z1_i [7:0] = mask
-Z2_i [7:0] = mask
+Z0_i [7:0] = static_random
+Z1_i [7:0] = static_random
+Z2_i [7:0] = static_random
 # registers:
 AX_CY_Z1_q [7:0] = unimportant
 CX_AY_Z1_q [7:0] = unimportant

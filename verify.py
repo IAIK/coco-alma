@@ -43,9 +43,9 @@ def parse_arguments():
     parser.add_argument("-g", "--glitch-behavior", dest="glitch_behavior",
                         required=False, default=STRICT, choices=[STRICT, LOOSE],
                         help="Determines behavior of glitches. The 'strict' mode is the worst case, 'loose' is more realistic (default: %(default)s)")
-    parser.add_argument("-t", "--probe-duration", dest="probe_duration",
-                        required=False, default=ONCE, choices=[ONCE, ALWAYS],
-                        help="Specifies how a probe records values (default: %(default)s)")
+    parser.add_argument("-t", "--probing-model", dest="probing_model",
+                        required=False, default=TIME_CONSTRAINED, choices=[CLASSIC, TIME_CONSTRAINED],
+                        help="Specifies probing model in which checks are performed (default: %(default)s)")
     parser.add_argument("-x", "--trace-stable", action="store_true", dest="trace_stable",
                         help="Should trace signals be assumed stable")
     parser.set_defaults(trace_stable=False)
@@ -91,8 +91,8 @@ def parse_arguments():
     #Unfortunately, ap_check_dir_exists does not work for optional parameters
     helpers.check_dir_exists(args.dbg_output_dir_path) 
 
-    if args.export_cnf == True and args.probe_duration == ONCE:
-        raise argparse.ArgumentTypeError("Cannot export CNF formulas for probe duration once. Please use the --probe-duration always option.")
+    if args.export_cnf == True and args.probing_model == TIME_CONSTRAINED:
+        raise argparse.ArgumentTypeError("Cannot export CNF formulas for time-constrained probing model. Please use the --probing-model classic option.")
     if args.kissat_bin_path != None and args.export_cnf == False:
         raise argparse.ArgumentTypeError("Cannot use Kissat without exporting CNF formulas. Please use the --export-cnf option." % dir_path)
 
@@ -130,7 +130,7 @@ def generate_labeling(label_file_path, json_module):
         signal_label = signal_label.strip().split()
         label_type = signal_label[0]
         assert(label_type in LABEL_TYPES)
-        assert((label_type in (LABEL_MASK, LABEL_RANDOM, LABEL_OTHER) and len(signal_label) == 1) or
+        assert((label_type in (LABEL_STATIC_RANDOM, LABEL_VOLATILE_RANDOM, LABEL_OTHER) and len(signal_label) == 1) or
                (label_type == LABEL_SHARE and len(signal_label) == 2))
         if label_type == LABEL_OTHER: continue
 

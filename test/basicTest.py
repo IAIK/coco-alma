@@ -20,7 +20,7 @@ def test_keccak_dom():
     label_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
     assert label_process.returncode == 0
 
-    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probe-duration", "once", "--top-module", "keccak_sbox", "--glitch-behavior", "strict"]
+    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probing-model", "time-constrained", "--top-module", "keccak_sbox", "--glitch-behavior", "strict"]
     verify_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
     assert verify_process.returncode == 0
 
@@ -49,7 +49,7 @@ def test_dom_and_1storder():
     label_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
     assert label_process.returncode == 0
 
-    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probe-duration", "once", "--top-module", "dom_and_1storder", "--glitch-behavior", "strict"]
+    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probing-model", "time-constrained", "--top-module", "dom_and_1storder", "--glitch-behavior", "strict"]
     verify_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
 
 
@@ -83,11 +83,11 @@ def test_dom_and_1storder_broken():
     label_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
     assert label_process.returncode == 0
 
-    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "stable", "--rst-name", "rst_i", "--probe-duration", "once", "--top-module", "dom_and_1storder_broken", "--glitch-behavior", "strict"]
+    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "stable", "--rst-name", "rst_i", "--probing-model", "time-constrained", "--top-module", "dom_and_1storder_broken", "--glitch-behavior", "strict"]
     verify_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
     assert verify_process.returncode == 0
 
-    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probe-duration", "once", "--top-module", "dom_and_1storder_broken", "--glitch-behavior", "strict"]
+    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probing-model", "time-constrained", "--top-module", "dom_and_1storder_broken", "--glitch-behavior", "strict"]
     verify_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
 
 
@@ -118,11 +118,11 @@ def test_dom_and_2ndorder():
     label_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
     assert label_process.returncode == 0
 
-    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probe-duration", "once", "--top-module", "dom_and_2ndorder", "--glitch-behavior", "strict"]
+    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probing-model", "time-constrained", "--top-module", "dom_and_2ndorder", "--glitch-behavior", "strict"]
     verify_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
     assert verify_process.returncode == 0
 
-    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probe-duration", "once", "--top-module", "dom_and_2ndorder", "--glitch-behavior", "strict", "--order", "2"]
+    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i","--probing-model", "time-constrained", "--top-module", "dom_and_2ndorder", "--glitch-behavior", "strict", "--order", "2"]
     verify_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
 
 
@@ -154,7 +154,7 @@ def test_dom_and_3rdorder():
     assert label_process.returncode == 0
 
 
-    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probe-duration", "once", "--top-module", "dom_and_3rdorder", "--glitch-behavior", "strict", "--order", "3"]
+    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probing-model", "time-constrained", "--top-module", "dom_and_3rdorder", "--glitch-behavior", "strict", "--order", "3"]
     verify_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
 
     assert verify_process.returncode == 0
@@ -185,12 +185,12 @@ def test_isw_and_1storder():
     label_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
     assert label_process.returncode == 0
 
-    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "stable", "--rst-name", "rst_i", "--probe-duration", "once", "--top-module", "isw_and_1storder", "--glitch-behavior", "strict"]
+    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "stable", "--rst-name", "rst_i", "--probing-model", "time-constrained", "--top-module", "isw_and_1storder", "--glitch-behavior", "strict"]
     verify_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
 
     assert verify_process.returncode == 0
 
-    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probe-duration", "once", "--top-module", "isw_and_1storder", "--glitch-behavior", "strict"] #, "--dbg-exact-formula"]
+    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probing-model", "time-constrained", "--top-module", "isw_and_1storder", "--glitch-behavior", "strict"] #, "--dbg-exact-formula"]
     print(" ".join(args))
     verify_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
     assert verify_process.returncode == 0
@@ -219,12 +219,12 @@ def test_isw_and_1storder_broken():
     label_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
     assert label_process.returncode == 0
 
-    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "stable", "--rst-name", "rst_i", "--probe-duration", "once", "--top-module", "isw_and_1storder_broken", "--glitch-behavior", "strict"]
+    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "stable", "--rst-name", "rst_i", "--probing-model", "time-constrained", "--top-module", "isw_and_1storder_broken", "--glitch-behavior", "strict"]
     verify_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
 
     assert verify_process.returncode == 0
 
-    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probe-duration", "once", "--top-module", "isw_and_1storder_broken", "--glitch-behavior", "strict"]
+    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probing-model", "time-constrained", "--top-module", "isw_and_1storder_broken", "--glitch-behavior", "strict"]
     verify_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
 
     assert verify_process.returncode != 0
@@ -253,12 +253,12 @@ def test_ti_toffoli():
     label_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
     assert label_process.returncode == 0
 
-    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "stable", "--rst-name", "rst_i", "--probe-duration", "once", "--top-module", "ti_toffoli", "--glitch-behavior", "strict"]
+    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "stable", "--rst-name", "rst_i", "--probing-model", "time-constrained", "--top-module", "ti_toffoli", "--glitch-behavior", "strict"]
     verify_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
 
     assert verify_process.returncode == 0
 
-    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probe-duration", "once", "--top-module", "ti_toffoli", "--glitch-behavior", "strict"]
+    args = ["python3", "verify.py", "--json","tmp/circuit.json","--label", "tmp/labels.txt", "--vcd", "tmp/tmp.vcd", "--cycles", "5", "--mode", "transient", "--rst-name", "rst_i", "--probing-model", "time-constrained", "--top-module", "ti_toffoli", "--glitch-behavior", "strict"]
     verify_process = subprocess.run(args,stdout=sys.stdout, stderr=sys.stderr)
 
     assert verify_process.returncode == 0
