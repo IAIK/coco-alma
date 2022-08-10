@@ -4,3 +4,4 @@ wheel
 pytest
 pytest-timeout
 pytest-html
+matplotlib
