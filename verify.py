@@ -52,6 +52,8 @@ def parse_arguments():
     parser.add_argument("-ml", "--minimize-leaks", action="store_true", dest="minimize_leaks",
                         help="Tells the solver to find the smallest correlating linear combination")
     parser.set_defaults(minimize_leaks=True)
+    parser.add_argument("--checking-mode", dest="checking_mode",
+                        required=False, default=PER_SECRET, choices=[PER_SECRET, PER_LOCATION], help="Specifies checking mode. 'per-secret' means one formula is built per secret and the solver identifies leaking probing locations. 'per-location' means one formula is built per potentially leaking probing locations and the solver identifies combinations of secrets causing leaks (default: %(default)s)." )
     parser.add_argument("-n", "--num-leaks", dest="num_leaks",
                         required=False, type=int, default=1,
                         help="Number of leakage locations to be reported if the circuit is insecure. (default: %(default)s)")

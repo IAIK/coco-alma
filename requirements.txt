@@ -1,3 +1,6 @@
 networkx==2.4
 python-sat==0.1.7.dev10
 wheel
+pytest
+pytest-timeout
+pytest-html

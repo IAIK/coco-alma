@@ -32,6 +32,55 @@ class Formula:
 
         self.dbg_defmap = {}
 
+    def make_assumes(self, shares):
+        assume_act = {}
+        for ss in sorted(list(shares.keys())):
+            # if either all or none are active, there is a leak
+            tmp_pos, tmp_neg, act = [self.solver.get_var() for _ in range(3)]
+            self.solver.add_clauses(make_and_bool([self.check_vars[share] for share in shares[ss]], tmp_pos))
+            self.solver.add_clauses(make_and_bool([-self.check_vars[share] for share in shares[ss]], tmp_neg))
+            self.solver.add_clause([-act, tmp_pos, tmp_neg])
+            assume_act[ss] = act
+        return assume_act
+
+
+    def analyse(self, assumes, num_leaks, mode, active):
+        fault = []
+        res = True
+        cache = set()
+        enable = self.solver.get_var()
+        last = -1
+        while res:
+            fault.clear()
+            model = set(self.solver.get_model())
+            for act in active.values():
+                if act.prop_var in model:
+                    fault.append(act)
+            last = max(map(lambda x: x.cycle, fault))
+            # forbid all cycles >= last
+            for act in active.values():
+                if act.prop_var in cache or act.cycle < last: continue
+                self.solver.add_clause([-enable, -act.prop_var])
+                cache.add(act.prop_var)
+            res = self.solver.solve(assumes + [enable])
+        assert(last >= 0)
+        # add a new enable for > last cycle
+        restrict = self.solver.get_var()
+        for act in active.values():
+            if act.cycle <= last: continue
+            self.solver.add_clause([-restrict, -act.prop_var])
+        result = []  # list of (model, list act)
+        seen = []
+        for i in range(num_leaks):
+            res = self.solver.solve(assumes + [-enable, restrict] + seen)
+            if not res: break
+            model = set(self.solver.get_model())
+            fault = list(filter(lambda x: x.prop_var in model, active.values()))
+            fault_min = self.__backtrack_fault(model, fault, mode)
+            result.append((model, fault_min))
+            seen += [-act.prop_var for act in fault]
+        return result
+
     def assure_biased(self, vars_id):
         if vars_id in self.biased_cache:
             self.biased_cache.remove(vars_id)
@@ -278,6 +327,7 @@ class SatChecker(object):
         self.pretty_names = []
         self.debugs = set(args.debugs)
         self.dbg_exact_formula = args.dbg_exact_formula
+        self.checking_mode = args.checking_mode
         self.__extract_label_info(labels)
         self.num_vars = len(self.variables) + (self.cycles * len(self.volatile_randoms))
         assert (self.num_vars == len(self.pretty_names))
@@ -569,9 +619,9 @@ class SatChecker(object):
             cycle += 1
         self.cycles = cycle
 
-    def __get_assumes(self, ss):
+    def __get_assumes(self, ss, assume_act):
         assumes = [self.formula.check_vars[share] for share in self.shares[ss]]
-        assumes += [self.formula.assume_act[ss_] for ss_ in self.shares if ss != ss_]
+        assumes += [assume_act[ss_] for ss_ in self.shares if ss != ss_]
         return assumes
 
     def __dbg_compute_cone(self, location, preds, last):
@@ -833,6 +883,7 @@ class SatChecker(object):
 
     def __debug_leaks(self, leaks):
         for i, loc in enumerate(leaks):
+
             model, acts = loc
             self.__dbg_state(i, model, acts)
 
@@ -861,6 +912,29 @@ class SatChecker(object):
             if len(leaks) >= self.num_leaks: break
         return leaks
 
+
+    def __make_checks(self, active):
+        # keys is just used to keep the order consistent
+        keys = list(active.keys())
+        act_vars = [active[key].prop_var for key in keys]
+        self.formula.solver.at_most_k_of_n(self.order, act_vars)
+        for var, var_idx in zip(self.variables, range(self.num_vars)):
+            ands = []
+            for kid, key in enumerate(keys):
+                prp = self.formula.prop_var_sets[key][var_idx]
+                if prp == "0": pass
+                elif prp == "1": ands.append(act_vars[kid])
+                else:
+                    c = self.formula.solver.get_var()
+                    self.formula.solver.add_clauses(
+                        make_and_bool_(prp, act_vars[kid], c))
+                    ands.append(c)
+            self.formula.check_vars[var] = self.formula.solver.xor_list(ands)
+        
+    
+
+
+
     def __check_secure_time_constrained(self):
         leaks = []
         self.__find_reset(self.rst_phase)
@@ -883,20 +957,46 @@ class SatChecker(object):
             prev_active += curr_active
             curr_active = self.formula.collect_active_time_constrained(self.mode, self.glitch_behavior, cycle)
 
-            # done checking comb(prev_active, ord) is checked
-            # ...
-            # need to check comb(prev_active, 1) + comb(curr_active, ord)
-            # need to check comb(prev_active, 0) + comb(curr_active, ord)
             print("Checking cycle %d:" % cycle)
-            for prev_ord in range(0, self.order):
-                curr_ord = self.order - prev_ord
-                for probe_prev_i, prev_vars_ids in enumerate(itertools.combinations(prev_active, prev_ord)):
-                    for probe_curr_i, curr_vars_ids in enumerate(itertools.combinations(curr_active, curr_ord)):
-                        all_ids = tuple(set(sum(prev_vars_ids + curr_vars_ids, tuple())))
-                        leak = self.__check_tuple(all_ids, all_masks)
-                        if leak is None: continue
-                        leaks.append(leak)
-                        if len(leaks) >= self.num_leaks: return leaks
+            if self.checking_mode == PER_SECRET:
+                # Collect_active
+
+                node_vars = [self.formula.node_vars_stable, self.formula.node_vars_trans][(self.mode == TRANSIENT) & 1]
+                active = {}
+                for cycle, vars in enumerate(node_vars):
+                    for node in vars.keys():
+                        self.formula.vars_to_info[vars[node]] = VariableInfo(cycle, node)
+                        if vars[node] in active.keys(): continue
+                        if vars[node] in self.formula.covered_bot_vars: continue
+                        active[vars[node]] = ActiveInfo(cycle, node, self.formula.solver.get_var())
+
+                self.__make_checks(active)
+                assume_act = self.formula.make_assumes(self.shares)
+                self.formula.solver.add_clauses([[-self.formula.check_vars[m]] for m in all_masks])
+                check_fmt = "Checking secret %%%dd %%s: " % len(str(len(self.shares)))
+                for ss in sorted(list(self.shares.keys())):
+                    assumes = self.__get_assumes(ss, assume_act)
+                    print(check_fmt % (ss, assumes[:self.order + 1]))
+                    r = self.formula.solver.solve(assumes)
+                    if not r: continue
+                    leak = self.formula.analyse(assumes, self.num_leaks, self.mode,active)
+                    
+                    leaks.append(leak[0])  
+                    if len(leaks) >= self.num_leaks: return leaks
+            elif self.checking_mode == PER_LOCATION:
+                # done checking comb(prev_active, ord) is checked
+                # ...
+                # need to check comb(prev_active, 1) + comb(curr_active, ord)
+                # need to check comb(prev_active, 0) + comb(curr_active, ord)
+                for prev_ord in range(0, self.order):
+                    curr_ord = self.order - prev_ord
+                    for probe_prev_i, prev_vars_ids in enumerate(itertools.combinations(prev_active, prev_ord)):
+                        for probe_curr_i, curr_vars_ids in enumerate(itertools.combinations(curr_active, curr_ord)):
+                            all_ids = tuple(set(sum(prev_vars_ids + curr_vars_ids, tuple())))
+                            leak = self.__check_tuple(all_ids, all_masks)
+                            if leak is None: continue
+                            leaks.append(leak)
+                            if len(leaks) >= self.num_leaks: return leaks
             cycle += 1
         return leaks
 

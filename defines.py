@@ -49,6 +49,9 @@ STABLE = "stable"
 TIME_CONSTRAINED = "time-constrained"
 CLASSIC = "classic"
 
+PER_SECRET = "per-secret"
+PER_LOCATION = "per-location"
+
 STRICT = "strict"
 LOOSE = "loose"
 
