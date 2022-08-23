@@ -72,7 +72,8 @@ class VCDStorage:
                     # e.g., ['$var', 'reg', '64', ')', 'pt1', '[63:0]', '$end'] -> 'pt1'
                     signal_name = line[4]
                     up, down = helpers.get_slice(line[5][1:-1], self.line_nr, None, True)
-                    assert (up - down + 1 == signal_width), "%s:%d Signal width does not match" % (self.vcd_file_path, self.line_nr)
+                    top, bot = max(up, down), min(up, down)
+                    assert (top - bot + 1 == signal_width), "%s:%d Signal width does not match" % (self.vcd_file_path, self.line_nr)
                 else:
                     # Use the remaining components for the signal name.
                     # e.g., ['$var', 'wire', '1', '7', '_00004_', '$end']        -> '_00004_'

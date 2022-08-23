@@ -66,10 +66,18 @@ def parse_arguments():
                         help="Phase of the reset signal that triggers the reset (default: %(default)s)")
     parser.add_argument("-d", "--dbg-output-dir", dest="dbg_output_dir_path", 
                         required=False, default=TMP_DIR,
-                        help="Directory in which debug traces (dbg-label-trace-?.txt, dbg-circuit-?.dot) are written (default: %(default)s)")
+                        help="Directory in which debug traces (dbg-label-trace-?.txt, dbg-circuit-?.dot) "
+                             "are written (default: %(default)s)")
     parser.add_argument("-ds", "--dbg-signals", dest="debugs",
                         required=False, default=[], nargs="+", type=str,
                         help="List of debug signals whose values should be printed")
+    parser.add_argument("-is", "--ignored-signals", dest="ignored",
+                        required=False, default=[], nargs="+", type=str,
+                        help="Cells whose names contain these strings (and their logic cone) to be "
+                             "are forced to be stable and then ignored during checks")
+    parser.add_argument("-hd", "--include-hamming", action="store_true", dest="hamming",
+                        help="Include transition leakage in stable mode")
+    parser.set_defaults(hamming=False)
     parser.add_argument("--top-module", dest="top_module",
                         required=True, type=str,
                         help="Name of the top module")
@@ -133,6 +141,28 @@ def generate_labeling(label_file_path, json_module):
     return label_dict
 
 
+def generate_ignored(circuit, json_module, ignored_strings):
+    net_bits, _, _ = helpers.bit_to_net(json_module)
+    ignored = set()
+    for fs in ignored_strings:
+        for name in net_bits:
+            if fs not in name: continue
+            for b in net_bits[name]:
+                if type(b) is int:
+                    ignored.add(b)
+
+    for node_id in circuit.nodes:
+        preds = tuple(circuit.predecessors(node_id))
+        if len(preds) == 0: continue
+        if all(map(lambda p: p in ignored, preds)):
+            ignored.add(node_id)
+
+    for node_id in ignored:
+        print(circuit.cells[node_id])
+
+    return ignored
+
+
 def vcd_json_sanity_check(trace, circuit_graph, rst_name):
     assert(rst_name in trace.name_to_id), "Reset signal %s not recognized." % (rst_name)
     for node in circuit_graph.nodes():
@@ -148,13 +178,14 @@ def pretty_error(checker, cycle, cell):
 
     stable = checker.formula.node_vars_stable[cycle]
     trans = checker.formula.node_vars_trans[cycle] if checker.mode == TRANSIENT else None
+    hamming = checker.formula.node_vars_diff[cycle] if checker.hamming else None
     model = set(checker.formula.solver.get_model())
 
     for node_id in checker.circuit.nodes:
         node_cell = checker.circuit.cells[node_id]
         if node_cell != cell: continue
 
-        for mode, mstr in zip((stable, trans), ("stable", "trans ")):
+        for mode, mstr in zip((stable, hamming, trans), ("stable ", "hamming", "trans  ")):
             if mode is None or node_id not in mode: continue
             res = checker.formula.model_for_vars(model, mode[node_id])
             # generate mappings for signals that contribute to the leak
@@ -176,8 +207,9 @@ def main():
 
     module = circuit_json["modules"][args.top_module]
     label_dict = generate_labeling(args.label_file_path, module)
+    ignored_set = generate_ignored(safe_graph, module, args.ignored)
     trace = VCDStorage(args.vcd_file_path)
-    checker = SatChecker(label_dict, trace, safe_graph, args)
+    checker = SatChecker(label_dict, ignored_set, trace, safe_graph, args)
 
     status, locations = checker.check()
     leaks = [l[1] for l in locations]

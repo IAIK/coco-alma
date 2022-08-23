@@ -17,7 +17,6 @@ class CircuitGraph:
         #self.write_graph()
         self.print_graph_info()
 
-
     def parse_json(self):
         wires = {}  # output -> inputs
         module = self.circuit_json["modules"][self.top_module]
