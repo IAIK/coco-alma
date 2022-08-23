@@ -42,19 +42,27 @@ def parse_arguments():
                         help="The verification mode (default: %(default)s)")
     parser.add_argument("-g", "--glitch-behavior", dest="glitch_behavior",
                         required=False, default=STRICT, choices=[STRICT, LOOSE],
-                        help="Determines behavior of glitches. The 'strict' mode is the worst case, 'loose' is more realistic (default: %(default)s)")
-    parser.add_argument("-t", "--probe-duration", dest="probe_duration",
-                        required=False, default=ONCE, choices=[ONCE, ALWAYS],
-                        help="Specifies how a probe records values (default: %(default)s)")
+                        help="Determines behavior of glitches. The 'strict' mode is the worst case, 'loose' is more"
+                             "realistic (default: %(default)s)")
+    parser.add_argument("-t", "--probing-model", dest="probing_model",
+                        required=False, default=TIME_CONSTRAINED, choices=[CLASSIC, TIME_CONSTRAINED],
+                        help="Specifies probing model in which checks are performed (default: %(default)s)")
     parser.add_argument("-x", "--trace-stable", action="store_true", dest="trace_stable",
                         help="Should trace signals be assumed stable")
     parser.set_defaults(trace_stable=False)
     parser.add_argument("-ml", "--minimize-leaks", action="store_true", dest="minimize_leaks",
                         help="Tells the solver to find the smallest correlating linear combination")
     parser.set_defaults(minimize_leaks=True)
+    parser.add_argument("--checking-mode", dest="checking_mode",
+                        required=False, default=PER_SECRET, choices=[PER_SECRET, PER_LOCATION],
+                        help="Specifies checking mode. 'per-secret' means one formula is built per secret and the"
+                        "solver identifies leaking probing locations. 'per-location' means one formula is built per" 
+                        "potentially leaking probing locations and the solver identifies combinations of secrets" 
+                        "causing leaks (default: %(default)s).")
     parser.add_argument("-n", "--num-leaks", dest="num_leaks",
                         required=False, type=int, default=1,
-                        help="Number of leakage locations to be reported if the circuit is insecure. (default: %(default)s)")
+                        help="Number of leakage locations to be reported if the circuit is insecure." 
+                             " (default: %(default)s)")
     parser.add_argument("-r", "--rst-name", dest="rst_name",
                         required=False, default="rst_i",
                         help="Name of the reset signal (default: %(default)s)")
@@ -64,7 +72,7 @@ def parse_arguments():
     parser.add_argument("-p", "--rst-phase", dest="rst_phase",
                         required=False, default="1", choices=BIN_STR,
                         help="Phase of the reset signal that triggers the reset (default: %(default)s)")
-    parser.add_argument("-d", "--dbg-output-dir", dest="dbg_output_dir_path", 
+    parser.add_argument("-d", "--dbg-output-dir", dest="dbg_output_dir_path",
                         required=False, default=TMP_DIR,
                         help="Directory in which debug traces (dbg-label-trace-?.txt, dbg-circuit-?.dot) "
                              "are written (default: %(default)s)")
@@ -78,6 +86,17 @@ def parse_arguments():
     parser.add_argument("-hd", "--include-hamming", action="store_true", dest="hamming",
                         help="Include transition leakage in stable mode")
     parser.set_defaults(hamming=False)
+    parser.add_argument("--dbg-exact-formula", action="store_true", dest="dbg_exact_formula",
+                        help="For each node, print exact formula.")
+    parser.set_defaults(dbg_exact_formula=False)
+    parser.add_argument("--export-cnf", dest="export_cnf", action="store_true", help="Export CNF which needs to be" 
+                        "solved for each secret to dbg_output_dir. This allows to use other solvers than" 
+                        "CaDiCaL, e.g. Kissat." )
+    parser.set_defaults(export_cnf=False)
+    parser.add_argument("--kissat", dest="kissat_bin_path",
+                        required=False, type=helpers.ap_check_file_exists,
+                        help="Path to a the Kissat binary file. Note that for enabling solving with Kissat," 
+                             "you need to set the --export-cnf option.")
     parser.add_argument("--top-module", dest="top_module",
                         required=True, type=str,
                         help="Name of the top module")
@@ -87,8 +106,15 @@ def parse_arguments():
     if args.cycles <= 0:    args.cycles = UINT_MAX
     if args.num_leaks <= 0: args.num_leaks = UINT_MAX
     
-    #Unfortunately, ap_check_dir_exists does not work for optional parameters
+    # Unfortunately, ap_check_dir_exists does not work for optional parameters
     helpers.check_dir_exists(args.dbg_output_dir_path) 
+
+    if args.export_cnf == True and args.probing_model == TIME_CONSTRAINED:
+        raise argparse.ArgumentTypeError("Cannot export CNF formulas for time-constrained probing model. " 
+                                         "Please use the --probing-model classic option.")
+    if args.kissat_bin_path != None and args.export_cnf == False:
+        raise argparse.ArgumentTypeError("Cannot use Kissat without exporting CNF formulas. "
+                                         "Please use the --export-cnf option.")
 
     return args
 
@@ -124,7 +150,7 @@ def generate_labeling(label_file_path, json_module):
         signal_label = signal_label.strip().split()
         label_type = signal_label[0]
         assert(label_type in LABEL_TYPES)
-        assert((label_type in (LABEL_MASK, LABEL_RANDOM, LABEL_OTHER) and len(signal_label) == 1) or
+        assert((label_type in (LABEL_STATIC_RANDOM, LABEL_VOLATILE_RANDOM, LABEL_OTHER) and len(signal_label) == 1) or
                (label_type == LABEL_SHARE and len(signal_label) == 2))
         if label_type == LABEL_OTHER: continue
 
@@ -213,9 +239,13 @@ def main():
 
     status, locations = checker.check()
     leaks = [l[1] for l in locations]
-    if status:
+    if status and not(args.kissat_bin_path):
         print("The execution is secure")
         sys.exit(SECURE)
+    elif args.kissat_bin_path:
+        print("Skipped checking with CaDiCal, using Kissat instead.")
+        result = checker.checkKissat()
+        sys.exit(result)
     else:
         sys.stdout.write("The execution is not secure, here are some leaks:\n")
         for i in range(len(leaks)):

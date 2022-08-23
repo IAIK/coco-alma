@@ -1,0 +1,13 @@
+\definecolor{abc}{HTML}{23801c}
+
+\begin{tikztimingtable}[yscale =2, xscale=1.5,%
+    timing/rowdist=3ex]
+  clock     &    10{2C} \\ 
+  \color{blue}rand\_i     & 2D{} [fill=blue,text=white] 20D{0x1234} \\ 
+  \color{abc}rand\_i  &  2D{} [fill=abc,text=white] 2D{0x1234} 4D{0xa29f} 4D{0x11ab} 4D{0xcafe} 4D{0x21ef} 2D{0x9933} \\ 
+\end{tikztimingtable}
+
+\begin{tikzpicture}[overlay]
+\node[blue] at (11.5,1.75) {static\_random};
+\node[abc] at (11.5,0.75) {volatile\_random};
+\end{tikzpicture}

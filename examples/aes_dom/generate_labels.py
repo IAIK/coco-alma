@@ -22,7 +22,7 @@ for d in data:
         disp = int(ds[1]) % 16 + adjust
         res = ":".join(ds[:-1]) + ": share " + str(base + disp + off)
     elif any(map(lambda x: ds[0].startswith(x), randoms)):
-        res = ":".join(ds[:-1]) + ": random"
+        res = ":".join(ds[:-1]) + ": volatile_random"
     data_.append(res)
         
 with open(sys.argv[2], "w+") as f:

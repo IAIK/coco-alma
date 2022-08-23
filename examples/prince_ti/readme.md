@@ -51,5 +51,5 @@ python3 verify.py \
     --mode transient \
     --rst-name i_reset \
     --trace-stable \
-    --probe-duration always
+    --probing-model classic
 ```

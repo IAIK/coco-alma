@@ -1,0 +1,16 @@
+# inputs:
+clk_i = unimportant
+rst_i = unimportant
+X0_i [0] = secret 0
+X0_i [7:1] = unimportant
+X1_i [0] = secret 0
+X1_i [7:1] = unimportant
+Y0_i [0] = secret 1
+Y0_i [7:1] = unimportant
+Y1_i [0] = secret 1
+Y1_i [7:0] = unimportant
+R01_i [0] = static_random
+R01_i [7:1] = unimportant
+# registers:
+tmp0_q [7:0] = unimportant
+tmp1_q [7:0] = unimportant

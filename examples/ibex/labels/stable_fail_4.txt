@@ -1,4 +1,4 @@
 # registers: x15, x16, x17
 u_core.register_file_i.rf_reg_reg[480] = secret 0
 u_core.register_file_i.rf_reg_reg[512] = secret 0
-u_core.register_file_i.rf_reg_reg[544] = mask
+u_core.register_file_i.rf_reg_reg[544] = static_random
