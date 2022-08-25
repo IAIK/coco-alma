@@ -3,7 +3,7 @@ project(coco-cpp)
 
 set(CMAKE_CXX_STANDARD 14)
 
-set(COCO_SOURCES coco.cpp SatSolver.cpp)
+set(COCO_SOURCES coco.cpp SatSolver.cpp PropVarSet.cpp)
 set(COCO_HEADERS coco.cpp SatSolver.h PropVarSet.h)
 
 add_executable(coco-cpp ${COCO_SOURCES})
@@ -55,3 +55,4 @@ set_target_properties(${SOLVER_LIB_NAME} PROPERTIES
 add_dependencies(coco-cpp ${SOLVER_NAME})
 target_link_libraries(coco-cpp ${SOLVER_LIB_NAME})
 
+add_subdirectory(test)

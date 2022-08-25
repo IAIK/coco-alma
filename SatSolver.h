@@ -1,23 +1,11 @@
 #pragma once
-#include <vector>
+#include "common.h"
+
 extern "C" {
 #include "ipasir.h"
 }
 
-#define LIST_SHALLOW
-// #define LIST_TREE
-// #define LIST_CHAIN
-
 #define EXPR_CACHING
-
-
-
-using var_t = int32_t;
-
-/// There are only two illegal int values for solver literals
-/// We use them here to represent the constants 0(false) and 1(true)
-constexpr var_t ZERO = 0;
-constexpr var_t ONE  = INT32_MIN;
 
 #ifdef EXPR_CACHING
 #include <unordered_map>
