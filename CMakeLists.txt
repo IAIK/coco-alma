@@ -3,7 +3,10 @@ project(coco-cpp)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(coco-cpp coco.cpp)
+set(COCO_SOURCES coco.cpp SatSolver.cpp)
+set(COCO_HEADERS coco.cpp SatSolver.h PropVarSet.h)
+
+add_executable(coco-cpp ${COCO_SOURCES})
 
 include(ExternalProject)
 set(BACKEND CADICAL)
