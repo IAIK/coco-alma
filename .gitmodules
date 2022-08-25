@@ -4,3 +4,15 @@
 [submodule "examples/aes_ti/design"]
 	path = examples/aes_ti/design
 	url = https://github.com/vedadux/AES_TIs
+[submodule "json"]
+	path = json
+	url = https://github.com/nlohmann/json.git
+[submodule "cxxopts"]
+	path = cxxopts
+	url = https://github.com/jarro2783/cxxopts.git
+[submodule "cryptominisat"]
+	path = cryptominisat
+	url = https://github.com/msoos/cryptominisat.git
+[submodule "cadical"]
+	path = cadical
+	url = https://github.com/arminbiere/cadical.git
