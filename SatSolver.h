@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SATSOLVER_H
+#define SATSOLVER_H
 #include "common.h"
 
 extern "C" {
@@ -9,6 +10,8 @@ extern "C" {
 
 #ifdef EXPR_CACHING
 #include <unordered_map>
+#include <cassert>
+
 using gate_key_t = uint64_t;
 constexpr gate_key_t make_key(var_t a, var_t b) { return ((gate_key_t)(a) << 32) | b; }
 #endif
@@ -25,7 +28,7 @@ private:
     void* m_solver;
 
     /// Internal ipasir_add forwarding
-    inline void add(var_t x) { ipasir_add(m_solver, x); }
+    inline void add(var_t x);
 
     #ifdef EXPR_CACHING
     /// Cache for AND gates
@@ -33,6 +36,12 @@ private:
     /// Cache for XOR gates
     std::unordered_map<gate_key_t, var_t> m_xor_cache;
     #endif
+
+    template<typename... Ts>
+    bool check_clause_inner(var_t head, Ts... tail);
+
+    template<typename... Ts>
+    void add_clause_inner(var_t head, Ts... tail);
 
 public:
     /// Allocates and returns a new solver variable
@@ -43,6 +52,9 @@ public:
     var_t make_xor(var_t a, var_t b);
     /// Creates a new variable representing the and of \a a and \a b
     var_t make_and(var_t a, var_t b);
+
+    template<typename... Ts>
+    void add_clause(var_t head, Ts... tail);
 
     /// Main satisfiability checking routine
     state_t check();
@@ -55,6 +67,12 @@ public:
     ~SatSolver();
 };
 
+inline void SatSolver::add(var_t x)
+{
+    ipasir_add(m_solver, x);
+    DEBUG(2) << x << " ";
+}
+
 inline var_t SatSolver::new_vars(const int number)
 {
     const var_t var = m_num_vars;
@@ -66,3 +84,46 @@ inline var_t SatSolver::new_var()
 {
     return new_vars(1);
 }
+
+template<>
+inline void SatSolver::add_clause_inner(var_t head)
+{
+    if (head != ZERO) add(head);
+    add(0); // terminate the clause
+    m_state = STATE_INPUT;
+}
+
+template<typename... Ts>
+inline void SatSolver::add_clause_inner(var_t head, Ts... tail)
+{
+    if (head != ZERO) add(head);
+    add_clause_inner(tail...);
+}
+
+template<typename... Ts>
+inline void SatSolver::add_clause(var_t head, Ts... tail)
+{
+    if(!check_clause_inner(head, tail...))
+    {
+        DEBUG(2) << "Eliminated clause" << std::endl;
+        return;
+    }
+    DEBUG(2) << "Adding clause: ";
+    add_clause_inner(head,tail...);
+    DEBUG(2) << std::endl;
+}
+
+template<>
+inline bool SatSolver::check_clause_inner(var_t head)
+{
+    assert(is_legal(head));
+    return (head != ONE);
+}
+
+template<typename... Ts>
+inline bool SatSolver::check_clause_inner(var_t head, Ts... tail) {
+    assert(is_legal(head));
+    return (head != ONE) && check_clause_inner(tail...);
+}
+
+#endif // SATSOLVER_H

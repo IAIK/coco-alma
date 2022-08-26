@@ -40,10 +40,10 @@ int SatSolver::make_xor(var_t a, var_t b)
     #endif
 
     var_t c = new_var();
-    add(-a); add(-b); add(-c); add(0);
-    add(+a); add(+b); add(-c); add(0);
-    add(-a); add(+b); add(+c); add(0);
-    add(+a); add(-b); add(+c); add(0);
+    add_clause(-a, -b, -c);
+    add_clause(+a, +b, -c);
+    add_clause(-a, +b, +c);
+    add_clause(+a, -b, +c);
     m_state = STATE_INPUT;
 
     #ifdef EXPR_CACHING
@@ -76,9 +76,9 @@ int SatSolver::make_and(const var_t a, const var_t b)
 
     // Add the clauses for constraining the variables
     const var_t c = new_var();
-    add(+a); add(-c); add(0);
-    add(+b); add(-c); add(0);
-    add(-a); add(-b); add(+c); add(0);
+    add_clause(+a, -c);
+    add_clause(+b, -c);
+    add_clause(-a, -b, +c);
     m_state = STATE_INPUT;
 
     #ifdef EXPR_CACHING
