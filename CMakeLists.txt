@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.10)
 project(coco-cpp)
+enable_testing()
 
 set(CMAKE_CXX_STANDARD 14)
-
 set(COCO_SOURCES coco.cpp SatSolver.cpp PropVarSet.cpp)
 set(COCO_HEADERS coco.cpp SatSolver.h PropVarSet.h)
 

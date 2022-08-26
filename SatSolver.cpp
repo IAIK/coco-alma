@@ -31,7 +31,7 @@ int SatSolver::make_xor(var_t a, var_t b)
     a = std::abs(a);
     b = std::abs(b);
 
-    #ifdef EXPR_CACHING
+    #ifdef OPT_EXPR_CACHING
     // See if we already have a variable for this
     const gate_key_t key = make_key(a < b ? a : b, a < b ? b : a);
     auto res = m_xor_cache.find(key);
@@ -46,7 +46,7 @@ int SatSolver::make_xor(var_t a, var_t b)
     add_clause(+a, -b, +c);
     m_state = STATE_INPUT;
 
-    #ifdef EXPR_CACHING
+    #ifdef OPT_EXPR_CACHING
     // Register variable in the cache
     m_xor_cache.emplace(key, c);
     // Also register implied relations
@@ -67,7 +67,7 @@ int SatSolver::make_and(const var_t a, const var_t b)
     if (a == b) return a;
     if (a == -b) return ZERO;
 
-    #ifdef EXPR_CACHING
+    #ifdef OPT_EXPR_CACHING
     // See if we already have a variable for this
     const gate_key_t key = make_key(a < b ? a : b, a < b ? b : a);
     auto res = m_and_cache.find(key);
@@ -81,7 +81,7 @@ int SatSolver::make_and(const var_t a, const var_t b)
     add_clause(-a, -b, +c);
     m_state = STATE_INPUT;
 
-    #ifdef EXPR_CACHING
+    #ifdef OPT_EXPR_CACHING
     // Register variable in the cache
     m_and_cache.emplace(key, c);
     #endif

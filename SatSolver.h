@@ -6,9 +6,9 @@ extern "C" {
 #include "ipasir.h"
 }
 
-#define EXPR_CACHING
+#define OPT_EXPR_CACHING
 
-#ifdef EXPR_CACHING
+#ifdef OPT_EXPR_CACHING
 #include <unordered_map>
 #include <cassert>
 
@@ -30,7 +30,7 @@ private:
     /// Internal ipasir_add forwarding
     inline void add(var_t x);
 
-    #ifdef EXPR_CACHING
+    #ifdef OPT_EXPR_CACHING
     /// Cache for AND gates
     std::unordered_map<gate_key_t, var_t> m_and_cache;
     /// Cache for XOR gates

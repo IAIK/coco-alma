@@ -42,8 +42,8 @@ public:
     /// Get number of solver variables hosted
     uint64_t size() const { return m_vars.size(); }
 
-    /// Creates a biased copy of set \a pvs
-    friend PropVarSetPtr bias(const PropVarSetPtr& p_pvs_a, var_t* p_var);
+    /// Creates a biased copy of set \a p_pvs and writes biasing variable into \a p_var
+    friend PropVarSetPtr bias(const PropVarSetPtr& p_pvs, var_t* p_var);
     /// Creates an XOR of two sets \a pvs_a and \a pvs_b
     friend PropVarSetPtr operator^(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs_b);
     /// Either return \a p_pvs if already biased or a biased copy
