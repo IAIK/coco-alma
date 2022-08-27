@@ -1,6 +1,4 @@
-#include <iostream>
-#include <cassert>
-
+#include "test_util.h"
 #include "SatSolver.h"
 
 void test_new_var()
@@ -262,19 +260,6 @@ void test_add_clause_simplify()
     }
 }
 
-#define TEST_CRASH(X)                   \
-do {                                    \
-    bool caught = false;                \
-    try { X; }                          \
-    catch (const SatSolverException& e) \
-    {                                   \
-        std::cout << e.what()           \
-            << std::endl;               \
-        caught = true;                  \
-    }                                   \
-    assert(caught);                     \
-} while (0)
-
 void test_add_clause_illegal()
 {
     // Check that 0 is detected
@@ -296,8 +281,6 @@ void test_add_clause_illegal()
     TEST_CRASH(solver.add_clause(ILLEGAL_1, -a));
 
 }
-
-#define STR(s) std::string(#s)
 
 int main(int argc, char* argv[])
 {

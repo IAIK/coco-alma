@@ -49,7 +49,11 @@ PropVarSetPtr operator^(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs
         const var_t s2 = var_it.second;
         const var_t r = p_res->m_solver->make_xor(s1, s2);
         // Keep invariant correct, never add 0 into the set
-        if (r == ZERO) continue;
+        if (r == ZERO)
+        {
+            p_res->m_vars.erase(label);
+            continue;
+        }
         p_res->m_vars[label] = r;
     }
     DEBUG(0) << "CALC " << *p_pvs_a << " ^ " << *p_pvs_b << " = " << *p_res << std::endl;
@@ -102,6 +106,14 @@ PropVarSetPtr operator&(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs
     assert(p_pvs_a.get() != nullptr);
     assert(p_pvs_b.get() != nullptr);
     assert(p_pvs_a->m_solver == p_pvs_b->m_solver);
+
+    // In case the sets are trivially the same, return biased copy
+    if (p_pvs_a.get() == p_pvs_b.get())
+    {
+        PropVarSetPtr p_res = +p_pvs_a;
+        DEBUG(0) << "CALC " << *p_pvs_a << " & " << *p_pvs_b << " = " << *p_res << std::endl;
+        return p_res;
+    }
 
     #ifdef OPT_NONLINEAR_COLLAPSE
     SatSolver* solver = p_pvs_a->m_solver;

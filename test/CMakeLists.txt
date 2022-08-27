@@ -15,6 +15,7 @@ set(UNIT_SOLVER_TESTS
   test_make_and_simplify
   test_add_clause_simplify
   test_add_clause_illegal)
+
 foreach(TEST_NAME ${UNIT_SOLVER_TESTS})
 add_test(NAME unit-solver:${TEST_NAME}
   COMMAND unit-solver ${TEST_NAME}
@@ -26,4 +27,14 @@ add_executable(unit-pvs ${UNIT_PVS_SRC})
 target_include_directories(unit-pvs PUBLIC "${PROJECT_SOURCE_DIR}")
 target_link_libraries(unit-pvs ${SOLVER_LIB_NAME})
 
-add_test(unit-pvs unit-pvs)
+set(UNIT_PVS_TESTS
+  test_constructor
+  test_ptr_xor
+  test_ptr_plus_bias
+  test_ptr_and)
+
+foreach(TEST_NAME ${UNIT_PVS_TESTS})
+    add_test(NAME unit-pvs:${TEST_NAME}
+      COMMAND unit-pvs ${TEST_NAME}
+      WORKING_DIRECTORY .)
+endforeach()
