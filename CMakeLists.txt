@@ -40,9 +40,8 @@ else()
 endif()
 
 ExternalProject_Add(${SOLVER_NAME}
-  PREFIX ${SOLVER_DIR}
-  SOURCE_DIR "${SOLVER_SRC_DIR}"
-  DOWNLOAD_COMMAND  git submodule init && git submodule update
+  SOURCE_DIR "${SOLVER_DIR}"
+  DOWNLOAD_COMMAND  git submodule update
   CONFIGURE_COMMAND cd ${SOLVER_DIR} && ${SOLVER_CONFIG_CMD}
   BUILD_COMMAND     cd ${SOLVER_BUILD_DIR} && make -j4
   BUILD_BYPRODUCTS ${SOLVER_LIB_PATH}
