@@ -1,7 +1,6 @@
 #include <popcntintrin.h>
 #include <iostream>
 #include "SatSolver.h"
-#include "assert.h"
 
 SatSolver::SatSolver() :
         m_num_vars(0), m_solver(ipasir_init()), m_state(STATE_INPUT)
@@ -88,7 +87,7 @@ int SatSolver::make_and(const var_t a, const var_t b)
     return c;
 }
 
-SatSolver::state_t SatSolver::check()
+SatSolver::state_t SatSolver::check() noexcept
 {
     m_state = static_cast<state_t>(ipasir_solve(m_solver));
     return m_state;
@@ -96,6 +95,6 @@ SatSolver::state_t SatSolver::check()
 
 bool SatSolver::value(var_t a)
 {
-    assert(m_state == STATE_SAT);
+    Assert(m_state == STATE_SAT, REQUIRE_SAT);
     return ipasir_val(m_solver, a) > 0;
 }

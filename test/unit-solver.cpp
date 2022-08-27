@@ -224,6 +224,79 @@ void test_make_and_simplify()
     #endif
 }
 
+void test_add_clause_simplify()
+{
+    // Check that ZERO literal is eliminated
+    {
+        SatSolver solver;
+        var_t a  = solver.new_var();
+        solver.add_clause(a, ZERO);
+
+        SatSolver::state_t res = solver.check();
+        assert(res == SatSolver::STATE_SAT);
+        bool a_val = solver.value(a);
+        assert(a_val == true);
+        solver.add_clause(-a);
+        res = solver.check();
+        assert(res == SatSolver::STATE_UNSAT);
+    }
+    // Check that clause with ONE is eliminated
+    {
+        SatSolver solver;
+        var_t a = solver.new_var();
+        var_t b = solver.new_var();
+        solver.add_clause(a, ONE, -b);
+        SatSolver::state_t res;
+        for (int i = 0; i < 4; i++)
+        {
+            res = solver.check();
+            assert(res == SatSolver::STATE_SAT);
+            bool a_val = solver.value(a);
+            bool b_val = solver.value(b);
+            var_t a_lit = a_val ? a : -a;
+            var_t b_lit = b_val ? b : -b;
+            solver.add_clause(-a_lit, -b_lit);
+        }
+        res = solver.check();
+        assert(res == SatSolver::STATE_UNSAT);
+    }
+}
+
+#define TEST_CRASH(X)                   \
+do {                                    \
+    bool caught = false;                \
+    try { X; }                          \
+    catch (const SatSolverException& e) \
+    {                                   \
+        std::cout << e.what()           \
+            << std::endl;               \
+        caught = true;                  \
+    }                                   \
+    assert(caught);                     \
+} while (0)
+
+void test_add_clause_illegal()
+{
+    // Check that 0 is detected
+    SatSolver solver;
+    var_t a = solver.new_var();
+    constexpr var_t ILLEGAL_0 = 0;
+    constexpr var_t ILLEGAL_1 = INT32_MIN;
+
+    TEST_CRASH(solver.add_clause(ILLEGAL_0));
+    TEST_CRASH(solver.add_clause(ILLEGAL_1));
+
+    TEST_CRASH(solver.add_clause(+a, ILLEGAL_0));
+    TEST_CRASH(solver.add_clause(-a, ILLEGAL_0));
+    TEST_CRASH(solver.add_clause(ILLEGAL_0, +a));
+    TEST_CRASH(solver.add_clause(ILLEGAL_0, -a));
+    TEST_CRASH(solver.add_clause(+a, ILLEGAL_1));
+    TEST_CRASH(solver.add_clause(-a, ILLEGAL_1));
+    TEST_CRASH(solver.add_clause(ILLEGAL_1, +a));
+    TEST_CRASH(solver.add_clause(ILLEGAL_1, -a));
+
+}
+
 #define STR(s) std::string(#s)
 
 int main(int argc, char* argv[])
@@ -244,6 +317,10 @@ int main(int argc, char* argv[])
         test_make_xor_simplify();
     else if (test_name == STR(test_make_and_simplify))
         test_make_and_simplify();
+    else if (test_name == STR(test_add_clause_simplify))
+        test_add_clause_simplify();
+    else if (test_name == STR(test_add_clause_illegal))
+        test_add_clause_illegal();
     else
         return 1;
     return 0;

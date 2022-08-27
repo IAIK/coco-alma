@@ -12,7 +12,9 @@ set(UNIT_SOLVER_TESTS
   test_make_and
   test_add_clause
   test_make_xor_simplify
-  test_make_and_simplify)
+  test_make_and_simplify
+  test_add_clause_simplify
+  test_add_clause_illegal)
 foreach(TEST_NAME ${UNIT_SOLVER_TESTS})
 add_test(NAME unit-solver:${TEST_NAME}
   COMMAND unit-solver ${TEST_NAME}

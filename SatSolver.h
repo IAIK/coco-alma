@@ -10,10 +10,24 @@ extern "C" {
 
 #ifdef OPT_EXPR_CACHING
 #include <unordered_map>
-#include <cassert>
 
 using gate_key_t = uint64_t;
 constexpr gate_key_t make_key(var_t a, var_t b) { return ((gate_key_t)(a) << 32) | b; }
+#endif
+
+// If we are in debugging mode, enable exception throwing
+// Otherwise ignore the checks like with assert
+#ifndef NDEBUG
+class SatSolverException : public std::logic_error
+{
+public:
+    explicit SatSolverException(const char* message) : std::logic_error(message) {};
+};
+#define Assert(NCOND, MESSAGE) do { if (!(NCOND)) throw SatSolverException(MESSAGE); } while (0)
+constexpr const char* ILLEGAL_LITERAL = "Found illegal literal when adding clause";
+constexpr const char* REQUIRE_SAT     = "Solver must be in STATE_SAT state";
+#else
+#define Assert(NCOND, MESSAGE)
 #endif
 
 class SatSolver {
@@ -45,9 +59,9 @@ private:
 
 public:
     /// Allocates and returns a new solver variable
-    inline var_t new_var();
+    inline var_t new_var() noexcept;
     /// Allocates \a number many solver variables and returns the first one
-    inline var_t new_vars(int number);
+    inline var_t new_vars(int number) noexcept;
     /// Creates a new variable representing the xor of \a a and \a b
     var_t make_xor(var_t a, var_t b);
     /// Creates a new variable representing the and of \a a and \a b
@@ -57,7 +71,7 @@ public:
     void add_clause(var_t head, Ts... tail);
 
     /// Main satisfiability checking routine
-    state_t check();
+    state_t check() noexcept;
     /// Return the value assigned to variable \a a
     bool value(var_t a);
 
@@ -73,14 +87,14 @@ inline void SatSolver::add(var_t x)
     DEBUG(2) << x << " ";
 }
 
-inline var_t SatSolver::new_vars(const int number)
+inline var_t SatSolver::new_vars(const int number) noexcept
 {
     const var_t var = m_num_vars;
     m_num_vars += number;
     return var + 1;
 }
 
-inline var_t SatSolver::new_var()
+inline var_t SatSolver::new_var() noexcept
 {
     return new_vars(1);
 }
@@ -116,13 +130,13 @@ inline void SatSolver::add_clause(var_t head, Ts... tail)
 template<>
 inline bool SatSolver::check_clause_inner(var_t head)
 {
-    assert(is_legal(head));
+    Assert(is_legal(head), ILLEGAL_LITERAL);
     return (head != ONE);
 }
 
 template<typename... Ts>
 inline bool SatSolver::check_clause_inner(var_t head, Ts... tail) {
-    assert(is_legal(head));
+    Assert(is_legal(head), ILLEGAL_LITERAL);
     return (head != ONE) && check_clause_inner(tail...);
 }
 
