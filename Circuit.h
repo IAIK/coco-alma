@@ -9,26 +9,9 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
+#include "cell_types.h"
 
 enum class signal_id_t : uint32_t {S_0 = 0, S_1 = 1, S_X = UINT32_MAX, S_Z = UINT32_MAX - 1};
-
-enum class cell_type_t : uint32_t {
-    CELL_AND = 0x100, CELL_OR = 0x101, CELL_XOR = 0x102, CELL_XNOR = 103,
-    CELL_NOT = 0x200,
-    CELL_DFF = 0x400,
-    CELL_MUX = 0x800};
-
-inline bool is_binary(cell_type_t x)
-{ return static_cast<uint32_t>(x) & 0x100; }
-
-inline bool is_unary(cell_type_t x)
-{ return static_cast<uint32_t>(x) & 0x200; }
-
-inline bool is_register(cell_type_t x)
-{ return static_cast<uint32_t>(x) & 0x400; }
-
-inline bool is_multiplexer(cell_type_t x)
-{ return static_cast<uint32_t>(x) & 0x800; }
 
 
 

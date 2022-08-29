@@ -66,7 +66,6 @@ Circuit::Circuit(const std::string& json_file_path, const std::string& top_modul
         }
     }
 
-    /*
     // Register all cells of the circuit
     const auto& cells = module.at("cells");
     for (const auto& cell_data: cells.items())
@@ -83,5 +82,4 @@ Circuit::Circuit(const std::string& json_file_path, const std::string& top_modul
         // CellType type = cell_type(stype);
 
     }
-    */
 }
