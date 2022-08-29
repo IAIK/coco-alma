@@ -35,8 +35,11 @@ enum class cell_type_t : uint32_t
     CELL_DFFE_PN0N = 0x438, CELL_DFFE_PN1N = 0x43a, CELL_DFFE_PP0N = 0x43c, CELL_DFFE_PP1N = 0x43e,
     CELL_DFFE_NN0P = 0x431, CELL_DFFE_NN1P = 0x433, CELL_DFFE_NP0P = 0x435, CELL_DFFE_NP1P = 0x437,
     CELL_DFFE_PN0P = 0x439, CELL_DFFE_PN1P = 0x43b, CELL_DFFE_PP0P = 0x43d, CELL_DFFE_PP1P = 0x43f,
-    /* multiplexer gates */ CELL_MUX = 0x800, CELL_NMUX = 0x880
+    /* multiplexer gates */ CELL_MUX = 0x800, CELL_NMUX = 0x880,
+    /* error */ CELL_NONE = 0x000
 };
+
+cell_type_t cell_type_from_string(const std::string& x);
 
 constexpr bool is_multiplexer(cell_type_t x)
 { return static_cast<uint32_t>(x) & 0x800; }
