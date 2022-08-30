@@ -19,9 +19,9 @@ Circuit::Circuit(const std::string& json_file_path, const std::string& top_modul
     m_signals.insert(signal_id_t::S_X);
     m_signals.insert(signal_id_t::S_Z);
 
-    // Register all ports of the circuit
-    const auto& ports = module.at("ports");
-    for (const auto& port_data: ports.items())
+    // Register all module_ports of the circuit
+    const auto& module_ports = module.at("ports");
+    for (const auto& port_data: module_ports.items())
     {
         const auto& key = port_data.key();
         const auto& value = port_data.value();
@@ -61,10 +61,10 @@ Circuit::Circuit(const std::string& json_file_path, const std::string& top_modul
         }
     }
 
-    // Register all cells of the circuit
-    const auto& cells = module.at("cells");
+    // Register all module_cells of the circuit
+    const auto& module_cells = module.at("cells");
     std::unordered_set<signal_id_t> missing;
-    for (const auto& cell_data: cells.items())
+    for (const auto& cell_data: module_cells.items())
     {
         const auto& key = cell_data.key();
         const auto& value = cell_data.value();
@@ -167,6 +167,7 @@ Circuit::Circuit(const std::string& json_file_path, const std::string& top_modul
         }
     }
 
+    // Check that all outputs are actually defined
     if (!missing.empty()) throw std::logic_error(ILLEGAL_MISSING_SIGNALS);
     for (signal_id_t sig: m_out_ports)
     {
@@ -174,4 +175,114 @@ Circuit::Circuit(const std::string& json_file_path, const std::string& top_modul
             { throw std::logic_error(ILLEGAL_MISSING_SIGNALS); }
     }
 
+    // Check that the clock edge matches on all registers
+    bool found_pos_edge = false;
+    bool found_neg_edge = false;
+    for (const Cell* p_cell : m_cells)
+    {
+        if (!is_register(p_cell->type())) continue;
+        const bool clock_trigger = dff_clock_trigger(p_cell->type());
+        found_pos_edge |= clock_trigger;
+        if (!clock_trigger) std::cout << p_cell->name() << std::endl;
+        found_neg_edge |= !clock_trigger;
+    }
+
+    if (found_neg_edge && found_pos_edge)
+        { throw std::logic_error(ILLEGAL_CLOCK_EDGE); }
+
+    std::unordered_set<signal_id_t> visited_sig(m_in_ports);
+    visited_sig.insert(signal_id_t::S_0);
+    visited_sig.insert(signal_id_t::S_1);
+    visited_sig.insert(signal_id_t::S_X);
+    visited_sig.insert(signal_id_t::S_Z);
+
+    std::unordered_set<const Cell*> visited_cell;
+    std::vector<const Cell*> cell_order;
+    for (const Cell* p_cell : m_cells)
+    {
+        if (!is_register(p_cell->type())) continue;
+        cell_order.push_back(p_cell);
+        visited_cell.insert(p_cell);
+        visited_sig.insert(p_cell->m_ports.m_dff.m_out_q);
+        // Technically this could not hold due to compiler shenanigans
+        assert((&(p_cell->m_ports.m_dff.m_out_q)) == (&(p_cell->m_ports.m_dffr.m_out_q)));
+        assert((&(p_cell->m_ports.m_dff.m_out_q)) == (&(p_cell->m_ports.m_dffe.m_out_q)));
+        assert((&(p_cell->m_ports.m_dff.m_out_q)) == (&(p_cell->m_ports.m_dffer.m_out_q)));
+    }
+
+    while (cell_order.size() != m_cells.size())
+    {
+        std::cout << cell_order.size() << " " << m_cells.size() << std::endl;
+        for (const Cell* p_cell : m_cells)
+        {
+            if (visited_cell.find(p_cell) != visited_cell.end()) continue;
+            const cell_type_t type = p_cell->type();
+            const Ports& ports = p_cell->m_ports;
+            assert(!is_register(type));
+            #define sig_visited(x) (visited_sig.find(x) != visited_sig.end())
+            // Check whether the predecessors are visited, otherwise continue
+            if (is_unary(type) && sig_visited(ports.m_unr.m_in_a))
+            {
+                visited_sig.insert(ports.m_unr.m_out_y);
+            }
+            else if (is_binary(type) && sig_visited(ports.m_bin.m_in_a)
+                                        && sig_visited(ports.m_bin.m_in_b))
+            {
+                visited_sig.insert(ports.m_bin.m_out_y);
+            }
+            else if (is_multiplexer(type) && sig_visited(ports.m_mux.m_in_a)
+                                          && sig_visited(ports.m_mux.m_in_b)
+                                          && sig_visited(ports.m_mux.m_in_s))
+            {
+                visited_sig.insert(ports.m_mux.m_out_y);
+            }
+            else { continue; }
+
+            // If predecessors are visited, add the cell
+            visited_cell.insert(p_cell);
+            cell_order.push_back(p_cell);
+        }
+    }
+    m_cells = cell_order;
+
+    // Extract the remaining names from module_netnames
+    const auto& module_netnames = module.at("netnames");
+    for (const auto& name_data: module_netnames.items())
+    {
+        const auto& key = name_data.key();
+        const auto& value = name_data.value();
+
+        // The port name is the key
+        std::string name = key;
+
+        // Determine the bits, make sure it is an array
+        const auto& bits = value.at("bits");
+        if (!bits.is_array())
+            { throw std::logic_error(ILLEGAL_SIGNAL_LIST);}
+
+        // Convert the bits into signals
+        std::vector<signal_id_t> typed_signals;
+        typed_signals.reserve(bits.size());
+        for (const auto& bit_id : bits)
+        { typed_signals.push_back(get_signal_any(bit_id)); }
+
+        // If the name already exists, it is re-defined (possibly first within input ports)
+        // Make sure that everything is consistent, otherwise throw an error
+        const auto& found_it = m_name_bits.find(name);
+        if (found_it != m_name_bits.end())
+        {
+            const std::vector<signal_id_t>& other = found_it->second;
+            if (other.size() != typed_signals.size())
+                { throw std::logic_error(ILLEGAL_NAME_REDECLARATION); }
+            for (size_t i = 0; i < other.size(); i++)
+                if (typed_signals[i] != other[i])
+                    { throw std::logic_error(ILLEGAL_NAME_REDECLARATION); }
+        }
+        else
+        {
+            // If it was not there in the first place, add it as new
+            const auto& emplace_it = m_name_bits.emplace(name, typed_signals);
+            assert(emplace_it.second);
+        }
+    }
 }

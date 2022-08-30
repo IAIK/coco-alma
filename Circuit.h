@@ -18,7 +18,7 @@ private:
     std::unordered_set<signal_id_t> m_in_ports;
     std::unordered_set<signal_id_t> m_out_ports;
     std::unordered_set<signal_id_t> m_signals;
-    std::vector<Cell*> m_cells;
+    std::vector<const Cell*> m_cells;
     std::unordered_map<std::string, std::vector<signal_id_t>> m_name_bits;
     template <typename T> signal_id_t get_signal_any(T& bit);
 public:

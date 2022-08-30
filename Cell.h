@@ -13,7 +13,7 @@ constexpr const char* ILLEGAL_SIGNAL_LIST        = "Detected non-array type for 
 constexpr const char* ILLEGAL_NAME_REDECLARATION = "Redeclaration of existing signal name";
 constexpr const char* ILLEGAL_CELL_CYCLE         = "Cell definition produces cycle";
 constexpr const char* ILLEGAL_MISSING_SIGNALS    = "Found signals that are used but undefined";
-
+constexpr const char* ILLEGAL_CLOCK_EDGE         = "Found both posedge and negedge flip-flops";
 
 
 enum class signal_id_t : uint32_t {S_0 = 0, S_1 = 1, S_X = UINT32_MAX, S_Z = UINT32_MAX - 1};
@@ -72,24 +72,26 @@ struct DfferPorts : public DffrPorts
             DffrPorts(c, d, q, r), m_in_e(e) {};
 };
 
+union Ports
+{
+public:
+    BinaryPorts      m_bin;
+    UnaryPorts       m_unr;
+    DffPorts         m_dff;
+    DffrPorts        m_dffr;
+    DffePorts        m_dffe;
+    DfferPorts       m_dffer;
+    MultiplexerPorts m_mux;
+    inline Ports() { std::memset(this, 0, sizeof(Ports)); };
+};
+
 class Cell
 {
 protected:
     std::string m_name;
     cell_type_t m_type;
-    union Ports
-    {
-    public:
-        BinaryPorts      m_bin;
-        UnaryPorts       m_unr;
-        DffPorts         m_dff;
-        DffrPorts        m_dffr;
-        DffePorts        m_dffe;
-        DfferPorts       m_dffer;
-        MultiplexerPorts m_mux;
-        inline Ports();
-    } m_ports;
-
+    Ports m_ports;
+    friend class Circuit;
 public:
     const std::string& name() const { return m_name; }
     cell_type_t type() const { return m_type; }
@@ -101,11 +103,5 @@ public:
     Cell(std::string c_name, cell_type_t c_type, DfferPorts c_ports);
     Cell(std::string c_name, cell_type_t c_type, MultiplexerPorts c_ports);
 };
-
-inline Cell::Ports::Ports()
-{
-    std::memset(this, 0, sizeof(m_ports));
-}
-
 
 #endif // CELL_H
