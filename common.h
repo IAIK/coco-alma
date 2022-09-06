@@ -2,10 +2,11 @@
 #define COMMON_H
 
 #include <cstdint>
+#include <iostream>
 
 /// Hacky debugging utility
 #define VERBOSITY 2L
-#define DEBUG(l) (l <= VERBOSITY) && std::cout
+#define DEBUG(l) ((l) <= VERBOSITY) && std::cout
 
 /// Type for solver variables and literals
 using var_t = int32_t;
@@ -20,5 +21,21 @@ inline bool is_legal(var_t x) { return (-x != x); }
 /// Most solvers do not support so many variables anyway.
 constexpr var_t ZERO = -INT32_MAX;
 constexpr var_t ONE  = +INT32_MAX;
+
+/// Type for verification modes
+enum class verif_mode_t : uint8_t
+{ MODE_STABLE = 0x0, MODE_GLITCH = 0x1, MODE_HAMMING = 0x2, MODE_TRANSIENT = 0x3 };
+
+/// Returns whether glitches are considered in the verification mode
+constexpr bool has_glitches(verif_mode_t mode)
+{ return static_cast<uint8_t>(mode) & 0x1; }
+
+/// Returns whether transitions are considered in the verification mode
+constexpr bool has_hamming(verif_mode_t mode)
+{ return static_cast<uint8_t>(mode) & 0x2; }
+
+/// Simple implication utility function
+constexpr bool implies(const bool a, const bool b)
+{ return (~a || b); }
 
 #endif // COMMON_H

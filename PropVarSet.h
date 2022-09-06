@@ -50,6 +50,9 @@ public:
     friend PropVarSetPtr operator+(const PropVarSetPtr& p_pvs);
     /// Creates an AND/OR of two sets \a pvs_a and \a pvs_b
     friend PropVarSetPtr operator&(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs_b);
+    /// Creates a new set that is both \a pvs_a and \a pvs_b simultaneously
+    friend PropVarSetPtr operator|(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs_b);
+
     /// Prints a set \a pvs to output stream \a stream
     friend std::ostream& operator<<(std::ostream &stream, const PropVarSet& pvs);
 

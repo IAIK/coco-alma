@@ -4,6 +4,7 @@
 
 cell_type_t cell_type_from_string(const std::string& x)
 {
+    // TODO: Think about replacing with constexpr map lookup
     if (x == "$_AND_") return cell_type_t::CELL_AND;
     else if (x == "$_OR_") return cell_type_t::CELL_OR;
     else if (x == "$_XOR_") return cell_type_t::CELL_XOR;

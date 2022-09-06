@@ -185,6 +185,79 @@ PropVarSetPtr operator&(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs
     return p_res;
 }
 
+PropVarSetPtr operator|(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs_b)
+{
+    assert(p_pvs_a.get() != nullptr);
+    assert(p_pvs_b.get() != nullptr);
+    assert(p_pvs_a->m_solver == p_pvs_b->m_solver);
+
+    // In case the sets are trivially the same, return biased copy
+    if (p_pvs_a.get() == p_pvs_b.get())
+    {
+        DEBUG(0) << "CALC " << *p_pvs_a << " | " << *p_pvs_b << " = " << *p_pvs_a << std::endl;
+        return p_pvs_a;
+    }
+
+    SatSolver* solver = p_pvs_a->m_solver;
+
+    // Separate into larger and smaller for insertion later
+    const PropVarSetPtr& p_large = p_pvs_a->size() > p_pvs_b->size() ? p_pvs_a : p_pvs_b;
+    const PropVarSetPtr& p_small = p_pvs_a->size() > p_pvs_b->size() ? p_pvs_b : p_pvs_a;
+
+    // Start as a copy of the larger one
+    PropVarSetPtr p_res = PropVarSet::make_pvs(*p_large);
+    DEBUG(1) << "Biasing of " << p_pvs_a << " is " << p_pvs_a->m_biased << std::endl;
+    DEBUG(1) << "Biasing of " << p_pvs_b << " is " << p_pvs_b->m_biased << std::endl;
+
+    const var_t p = solver->new_var();
+    p_large->m_biased = false;
+    p_small->m_biased = false;
+
+    // Go through all elements of the smaller set
+    for (const auto& var_it_small : p_small->m_vars)
+    {
+        const lidx_t label = var_it_small.first;
+        const var_t b = var_it_small.second;
+
+        const auto& p_var_it_res = p_res->m_vars.find(label);
+        if (p_var_it_res != p_res->m_vars.end())
+        {
+            // Found same index in result and small set, therefore constrain the variables
+            var_t &a = p_var_it_res->second;
+
+            // In this case, we actually have no choice and the result is already set to a
+            if (a == b) continue;
+
+            const var_t v = solver->new_var();
+            DEBUG(2) << "Entered adding part with " << p << " " << a << " " << b << " " << v << std::endl;
+
+            // Encodes that v = p ? a : b
+            solver->add_clause(-p,  a, -v);
+            solver->add_clause(-p, -a,  v);
+            solver->add_clause( p,  b, -v);
+            solver->add_clause( p, -b,  v);
+
+            // Update the variable in the result
+            a = v;
+        }
+        else
+        {
+            // Insert new variable that can be false at this label
+            p_res->m_vars[label] = solver->make_and(b, -p);
+        }
+    }
+
+    for (auto& var_it_large : p_res->m_vars)
+    {
+        const lidx_t label = var_it_large.first;
+        if (p_small->m_vars.find(label) != p_small->m_vars.end()) continue;
+        const var_t a = var_it_large.second;
+        var_it_large.second = solver->make_and(a, p);
+    }
+    DEBUG(0) << "CALC " << *p_pvs_a << " | " << *p_pvs_b << " = " << *p_res << std::endl;
+    return p_res;
+}
+
 std::ostream& operator<<(std::ostream &stream, const PropVarSet& pvs)
 {
     stream << "{";

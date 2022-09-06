@@ -162,6 +162,7 @@ Circuit::Circuit(const std::string& json_file_path, const std::string& top_modul
                 p_cell = new Cell(name, type, DfferPorts(c, d, q, r, e));
             }
             m_signals.insert(q);
+            m_reg_outs.insert(q);
             missing.erase(q);
             m_cells.push_back(p_cell);
         }
@@ -285,4 +286,20 @@ Circuit::Circuit(const std::string& json_file_path, const std::string& top_modul
             assert(emplace_it.second);
         }
     }
+}
+
+Circuit::~Circuit()
+{
+    for (const Cell* p_cell : m_cells)
+        { delete p_cell; }
+}
+
+bool Circuit::has(const std::string& name)
+{
+    return m_name_bits.find(name) != m_name_bits.end();
+}
+
+const std::vector<signal_id_t>& Circuit::operator[](const std::string& name)
+{
+    return m_name_bits.at(name);
 }
