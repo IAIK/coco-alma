@@ -1,10 +1,43 @@
 #ifdef VALUE_H
 
+#include "Cell.h"
+
 template <verif_mode_t mode>
 constexpr void Value<mode>::sanity() const
 {
     assert(implies(has_glitches(mode) && is_glitch_const(), is_stable_const()));
     assert(implies(!has_glitches(mode), m_const_stable));
+}
+
+template <verif_mode_t mode>
+bool Value<mode>::stable_val() const
+{
+    if (!is_stable_const())
+        throw std::logic_error(ILLEGAL_VALUE_NOT_CONST);
+    return m_const_value;
+}
+template <verif_mode_t mode>
+bool Value<mode>::glitch_val() const
+{
+    if (!is_glitch_const())
+        throw std::logic_error(ILLEGAL_VALUE_NOT_CONST);
+    return m_const_value;
+}
+
+template <verif_mode_t mode>
+const PropVarSetPtr& Value<mode>::stable_pvs() const
+{
+    if (is_stable_const())
+        throw std::logic_error(ILLEGAL_VALUE_NOT_CONST);
+    return m_stable_pvs;
+}
+
+template <verif_mode_t mode>
+const GlitchyPVS<mode>& Value<mode>::glitch_pvs() const
+{
+    if (is_glitch_const())
+        throw std::logic_error(ILLEGAL_VALUE_NOT_CONST);
+    return m_glitch_pvs;
 }
 
 // Constructor with constant for all cases
@@ -192,7 +225,7 @@ Value<mode> operator|(const Value<mode>& a, const Value<mode>& b)
 }
 
 template<verif_mode_t mode>
-ValueView<mode>& ValueView<mode>::operator=(Value<mode>& other)
+ValueView<mode>& ValueView<mode>::operator=(const Value<mode>& other)
 {
     other.sanity();
     m_value.sanity();
@@ -234,7 +267,45 @@ ValueView<mode>& ValueView<mode>::operator=(Value<mode>& other)
     }
 
     result.sanity();
-    return result;
+    m_value = result;
+    return *this;
 }
 
+template <verif_mode_t mode>
+ValueView<mode>& ValueView<mode>::operator=(uint64_t val)
+{
+    if (((val & 1) != val))
+    { std::cout << "Warning: ValueView assignment overflow" << std::endl; }
+    return operator=(Value<mode>((bool)val));
+}
+
+template <verif_mode_t mode>
+ValueViewVector<mode>::ValueViewVector(const ValueViewVector& other, const size_t up, const size_t down)
+{
+    if (up >= down)
+    {
+        const auto begin = other.m_views.cbegin() + down;
+        const auto end = other.m_views.cbegin() + up + 1;
+        m_views = std::vector<ValueView<mode>>(begin, end);
+    }
+    else
+    {
+        const auto begin = other.m_views.crbegin() + (other.m_views.size() - down - 1);
+        const auto end = other.m_views.crbegin() + (other.m_views.size() - up);
+        m_views = std::vector<ValueView<mode>>(begin, end);
+    }
+    assert(m_views.size() == (std::abs((int64_t)up - (int64_t)down) + 1L));
+}
+
+template <verif_mode_t mode>
+ValueViewVector<mode>& ValueViewVector<mode>::operator=(uint64_t val)
+{
+    if (size() < 64 && (val >> size()) != 0)
+    { std::cout << "Warning: ValueViewMode assignment overflow " << size() << std::endl; }
+
+    for (size_t i = 0; i < size(); i++)
+    { m_views.at(i) = Value<mode>((bool)((val >> i) & 1)); }
+
+    return *this;
+}
 #endif // VALUE_H

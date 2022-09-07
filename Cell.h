@@ -16,6 +16,9 @@ constexpr const char* ILLEGAL_CELL_CYCLE         = "Cell definition produces cyc
 constexpr const char* ILLEGAL_MISSING_SIGNALS    = "Found signals that are used but undefined";
 constexpr const char* ILLEGAL_CLOCK_EDGE         = "Found both posedge and negedge flip-flops";
 constexpr const char* ILLEGAL_SIGNAL_OVERWRITE   = "Overwriting value of signal during evaluation";
+constexpr const char* ILLEGAL_VALUE_NOT_CONST    = "Attempted getting constant from non-const value";
+constexpr const char* ILLEGAL_VALUE_NOT_SYMBOLIC = "Attempted getting pvs from non-pvs value";
+
 
 enum class signal_id_t : uint32_t {S_0 = 0, S_1 = 1, S_X = UINT32_MAX, S_Z = UINT32_MAX - 1};
 
@@ -104,11 +107,11 @@ public:
     Cell(std::string c_name, cell_type_t c_type, DfferPorts c_ports);
     Cell(std::string c_name, cell_type_t c_type, MultiplexerPorts c_ports);
 
-    template <typename V>
+    template <typename V, typename R>
     void eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::unordered_map<signal_id_t, V>& curr_signals) const;
 };
 
-template <typename V>
+template <typename V, typename R>
 void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::unordered_map<signal_id_t, V>& curr_signals) const
 {
     if (is_unary(m_type))
@@ -167,7 +170,7 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
         const V& val_s = curr_signals.at(in_s);
 
         // TODO: make a mux
-        V val_y = (val_s & val_a) ^ (~val_s & val_b);
+        V val_y = (~val_s & val_a) ^ (val_s & val_b);
 
         if (is_out_negated(m_type)) val_y = ~val_y;
         curr_signals[out_y] = val_y;
@@ -203,7 +206,8 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
             val_non_reset_wb = val_d;
         }
 
-        V val_res_q;
+        V val_fresh_q = prev_signals.at(out_q);
+        R val_res_q(val_fresh_q);
 
         if (dff_has_reset(m_type))
         {
@@ -220,7 +224,7 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
             val_res_q = val_non_reset_wb;
         }
 
-        curr_signals[out_q] = val_res_q;
+        curr_signals[out_q] = *val_res_q;
     }
 }
 
