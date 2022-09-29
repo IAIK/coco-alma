@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
+include(CTest)
 set(UNIT_SOLVER_SRC ../SatSolver.cpp unit-solver.cpp)
 add_executable(unit-solver ${UNIT_SOLVER_SRC})
 target_include_directories(unit-solver PUBLIC "${PROJECT_SOURCE_DIR}")
@@ -36,5 +37,31 @@ set(UNIT_PVS_TESTS
 foreach(TEST_NAME ${UNIT_PVS_TESTS})
     add_test(NAME unit-pvs:${TEST_NAME}
       COMMAND unit-pvs ${TEST_NAME}
+      WORKING_DIRECTORY .)
+endforeach()
+
+set(UNIT_CELL_SRC ../Cell.cpp unit-cell.cpp)
+add_executable(unit-cell ${UNIT_CELL_SRC})
+target_include_directories(unit-cell PUBLIC "${PROJECT_SOURCE_DIR}")
+# target_link_libraries(unit-cell ${SOLVER_LIB_NAME})
+
+set(UNIT_CELL_TESTS
+  test_and
+  test_or
+  test_xor
+  test_nand
+  test_nor
+  test_xnor
+  test_andnot
+  test_ornot
+
+  test_not
+  test_buf
+
+  )
+
+foreach(TEST_NAME ${UNIT_CELL_TESTS})
+    add_test(NAME unit-cell:${TEST_NAME}
+      COMMAND unit-cell ${TEST_NAME}
       WORKING_DIRECTORY .)
 endforeach()

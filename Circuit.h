@@ -26,6 +26,7 @@ protected:
 public:
     Circuit(const std::string& json_file_path, const std::string& top_module_name);
     bool has(const std::string& name);
+
     const std::vector<signal_id_t>& operator[](const std::string& name);
     ~Circuit();
 };

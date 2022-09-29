@@ -5,6 +5,7 @@
 #include <string>
 #include "cell_types.h"
 #include <unordered_map>
+#include <iostream>
 
 constexpr const char* ILLEGAL_SIGNAL_STRING      = "Could not parse string signal";
 constexpr const char* ILLEGAL_SIGNAL_TYPE        = "Could not parse signal from illegal type";
@@ -124,7 +125,7 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
         assert(curr_signals.find(in_a) != curr_signals.end());
         const V& val_a = curr_signals.at(in_a);
         V val_y = val_a;
-        if (is_out_negated(m_type)) val_y = ~val_y;
+        if (is_out_negated(m_type)) val_y = !val_y;
         curr_signals[out_y] = val_y;
     }
     else if (is_binary(m_type))
@@ -140,7 +141,7 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
         V val_b = curr_signals.at(in_b);
         V val_y;
 
-        if (is_second_negated(m_type)) val_b = ~val_b;
+        if (is_second_negated(m_type)) val_b = !val_b;
 
         if (gate_is_like_and(m_type))
             { val_y = val_a & val_b; }
@@ -152,7 +153,7 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
             val_y = val_a | val_b;
         }
 
-        if (is_out_negated(m_type)) val_y = ~val_y;
+        if (is_out_negated(m_type)) val_y = !val_y;
         curr_signals[out_y] = val_y;
     }
     else if (is_multiplexer(m_type))
@@ -170,9 +171,9 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
         const V& val_s = curr_signals.at(in_s);
 
         // TODO: make a mux
-        V val_y = (~val_s & val_a) ^ (val_s & val_b);
+        V val_y = (!val_s & val_a) ^ (val_s & val_b);
 
-        if (is_out_negated(m_type)) val_y = ~val_y;
+        if (is_out_negated(m_type)) val_y = !val_y;
         curr_signals[out_y] = val_y;
     }
     else
@@ -197,9 +198,9 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
             bool e_only = test_is_reg_with_enable(m_type);
             const signal_id_t in_e = e_only ? m_ports.m_dffe.m_in_e : m_ports.m_dffer.m_in_e;
             V val_e = prev_signals.at(in_e);
-            if (!dff_enable_trigger(m_type)) val_e = ~val_e;
+            if (!dff_enable_trigger(m_type)) val_e = !val_e;
             // TODO: make a mux
-            val_non_reset_wb = (val_e & val_d) ^ (~val_e & val_q);
+            val_non_reset_wb = (val_e & val_d) ^ (!val_e & val_q);
         }
         else
         {
@@ -214,17 +215,17 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
             bool r_only = test_is_reg_with_reset(m_type);
             const signal_id_t in_r = r_only ? m_ports.m_dffr.m_in_r : m_ports.m_dffer.m_in_r;
             V val_r = prev_signals.at(in_r);
-            if (!dff_reset_trigger(m_type)) val_r = ~val_r;
+            if (!dff_reset_trigger(m_type)) val_r = !val_r;
             V val_reset_wb = V(dff_reset_value(m_type));
             // TODO: Make a mux
-            val_res_q = (val_r & val_reset_wb) ^ (~val_r & val_non_reset_wb);
+            val_res_q = (val_r & val_reset_wb) ^ (!val_r & val_non_reset_wb);
         }
         else
         {
             val_res_q = val_non_reset_wb;
         }
 
-        curr_signals[out_q] = *val_res_q;
+        curr_signals[out_q] = val_res_q;
     }
 }
 

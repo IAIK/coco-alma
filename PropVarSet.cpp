@@ -108,7 +108,7 @@ PropVarSetPtr operator&(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs
     assert(p_pvs_a->m_solver == p_pvs_b->m_solver);
 
     // In case the sets are trivially the same, return biased copy
-    if (p_pvs_a.get() == p_pvs_b.get())
+    if (p_pvs_a.get() == p_pvs_b.get() || *p_pvs_a == *p_pvs_b)
     {
         PropVarSetPtr p_res = +p_pvs_a;
         DEBUG(0) << "CALC " << *p_pvs_a << " & " << *p_pvs_b << " = " << *p_res << std::endl;
@@ -192,7 +192,7 @@ PropVarSetPtr operator|(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs
     assert(p_pvs_a->m_solver == p_pvs_b->m_solver);
 
     // In case the sets are trivially the same, return biased copy
-    if (p_pvs_a.get() == p_pvs_b.get())
+    if (p_pvs_a.get() == p_pvs_b.get() || *p_pvs_a == *p_pvs_b)
     {
         DEBUG(0) << "CALC " << *p_pvs_a << " | " << *p_pvs_b << " = " << *p_pvs_a << std::endl;
         return p_pvs_a;
@@ -276,4 +276,12 @@ std::ostream& operator<<(std::ostream &stream, const PropVarSet& pvs)
     }
     stream << "}";
     return stream;
+}
+
+bool operator==(const PropVarSet& pvs_a, const PropVarSet& pvs_b)
+{
+    #ifdef OPT_FRESH_BIASED
+    if (pvs_a.m_biased != pvs_b.m_biased) return false;
+    #endif
+    return pvs_a.m_solver == pvs_b.m_solver && pvs_a.size() == pvs_b.size() && pvs_a.m_vars == pvs_b.m_vars;
 }

@@ -1,7 +1,8 @@
 #ifndef PROPVARSET_H
 #define PROPVARSET_H
 
-#include <unordered_map>
+// #include <unordered_map>
+#include <map>
 #include <memory>
 #include "common.h"
 
@@ -19,7 +20,7 @@ class PropVarSet {
 private:
     /// Map from label index to solver variable.
     /// Invariant: ZERO is never stored in this map.
-    std::unordered_map<lidx_t, var_t> m_vars;
+    std::map<lidx_t, var_t> m_vars;
     #ifdef OPT_FRESH_BIASED
     /// Whether the PVS is assumed biased in computations
     bool m_biased = false;
@@ -52,7 +53,8 @@ public:
     friend PropVarSetPtr operator&(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs_b);
     /// Creates a new set that is both \a pvs_a and \a pvs_b simultaneously
     friend PropVarSetPtr operator|(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs_b);
-
+    /// Checks whether two sets \a pvs_a and \a pvs_b are equal
+    friend bool operator==(const PropVarSet& pvs_a, const PropVarSet& pvs_b);
     /// Prints a set \a pvs to output stream \a stream
     friend std::ostream& operator<<(std::ostream &stream, const PropVarSet& pvs);
 

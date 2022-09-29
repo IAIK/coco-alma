@@ -18,8 +18,10 @@ void test_new_vars()
     SatSolver solver;
     var_t a = solver.new_vars(20);
     assert(is_legal(a));
+    assert(solver.num_vars() == 20);
     var_t b = solver.new_var();
     assert(is_legal(b));
+    assert(solver.num_vars() == 21);
     assert(a + 20 == b);
 }
 

@@ -38,11 +38,10 @@ private:
     state_t m_state;
     /// The number of currently allocated solver variables
     int m_num_vars;
+    /// The number of currently added solver clauses
+    int m_num_clauses;
     /// IPASIR solver object with generic (void*) type
     void* m_solver;
-
-    /// Internal ipasir_add forwarding
-    inline void add(var_t x);
 
     #ifdef OPT_EXPR_CACHING
     /// Cache for AND gates
@@ -51,9 +50,14 @@ private:
     std::unordered_map<gate_key_t, var_t> m_xor_cache;
     #endif
 
+    /// Internal ipasir_add forwarding
+    inline void add(var_t x);
+
+    /// Performs checks whether the clause is a tautology, or contains illegal literals
     template<typename... Ts>
     bool check_clause_inner(var_t head, Ts... tail);
 
+    /// Recursive template function that simplifies and adds a clause into the solver
     template<typename... Ts>
     void add_clause_inner(var_t head, Ts... tail);
 
@@ -62,11 +66,17 @@ public:
     inline var_t new_var() noexcept;
     /// Allocates \a number many solver variables and returns the first one
     inline var_t new_vars(int number) noexcept;
+    /// Returns the number of currently used variables
+    inline int num_vars() noexcept;
+    /// Returns the number of currently added clauses
+    inline int num_clauses() noexcept;
+
     /// Creates a new variable representing the xor of \a a and \a b
     var_t make_xor(var_t a, var_t b);
     /// Creates a new variable representing the and of \a a and \a b
     var_t make_and(var_t a, var_t b);
 
+    /// Public template function for adding clauses into the solver
     template<typename... Ts>
     void add_clause(var_t head, Ts... tail);
 
@@ -99,11 +109,22 @@ inline var_t SatSolver::new_var() noexcept
     return new_vars(1);
 }
 
+inline int SatSolver::num_vars() noexcept
+{
+    return m_num_vars;
+}
+
+inline int SatSolver::num_clauses() noexcept
+{
+    return m_num_clauses;
+}
+
 template<>
 inline void SatSolver::add_clause_inner(var_t head)
 {
     if (head != ZERO) add(head);
     add(0); // terminate the clause
+    m_num_clauses += 1;
     m_state = STATE_INPUT;
 }
 

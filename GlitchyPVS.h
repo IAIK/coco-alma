@@ -16,6 +16,7 @@ struct GlitchyPVS
     friend const GlitchyPVS& operator+(const GlitchyPVS& a) { return a; }
 
     constexpr void* get() const { return nullptr; }
+    constexpr uint32_t operator*() const { return 0; }
 };
 
 /// In case the mode requires glitches, it is just a PropVarSetPtr
