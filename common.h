@@ -5,7 +5,7 @@
 #include <iostream>
 
 /// Hacky debugging utility
-#define VERBOSITY 2L
+#define VERBOSITY -1L
 #define DEBUG(l) ((l) <= VERBOSITY) && std::cout
 
 /// Type for solver variables and literals

@@ -68,10 +68,10 @@ public:
 template <verif_mode_t mode>
 inline void Simulator<mode>::insert_consts(SimulatorValueMap& vals)
 {
-    vals.emplace(std::piecewise_construct, std::forward_as_tuple(signal_id_t::S_0), std::forward_as_tuple(this, false));
-    vals.emplace(std::piecewise_construct, std::forward_as_tuple(signal_id_t::S_1), std::forward_as_tuple(this, true));
-    vals.emplace(std::piecewise_construct, std::forward_as_tuple(signal_id_t::S_X), std::forward_as_tuple(this, false));
-    vals.emplace(std::piecewise_construct, std::forward_as_tuple(signal_id_t::S_Z), std::forward_as_tuple(this, false));
+    vals.emplace(std::piecewise_construct, std::forward_as_tuple(signal_id_t::S_0), std::forward_as_tuple(false));
+    vals.emplace(std::piecewise_construct, std::forward_as_tuple(signal_id_t::S_1), std::forward_as_tuple(true));
+    vals.emplace(std::piecewise_construct, std::forward_as_tuple(signal_id_t::S_X), std::forward_as_tuple(false));
+    vals.emplace(std::piecewise_construct, std::forward_as_tuple(signal_id_t::S_Z), std::forward_as_tuple(false));
 }
 
 template <verif_mode_t mode>
@@ -94,9 +94,9 @@ Simulator<mode>::Simulator(const Circuit& circ) :
     m_trace.emplace_back();
     SimulatorValueMap& first_cycle = m_trace.back();
     for (const signal_id_t sig : m_in_ports)
-        { first_cycle.emplace(std::piecewise_construct, std::forward_as_tuple(sig), std::forward_as_tuple(this, false)); }
+        { first_cycle.emplace(std::piecewise_construct, std::forward_as_tuple(sig), std::forward_as_tuple(false)); }
     for (const signal_id_t sig : m_reg_outs)
-        { first_cycle.emplace(std::piecewise_construct, std::forward_as_tuple(sig), std::forward_as_tuple(this, false)); }
+        { first_cycle.emplace(std::piecewise_construct, std::forward_as_tuple(sig), std::forward_as_tuple(false)); }
 
     insert_consts(first_cycle);
 
@@ -148,14 +148,14 @@ void Simulator<mode>::allocate_secrets(const Range range, const size_t num_share
         std::cout << secret_idx << std::endl;
         {  // Create a local scope here since the value should be inaccessible later
             PropVarSetPtr p_pvs = std::make_shared<PropVarSet>(&m_solver, secret_idx);
-            value_vector.emplace_back(this, p_pvs);
+            value_vector.emplace_back(p_pvs);
         }
         for (size_t sh = 1; sh < num_shares; sh++)
         {
             lidx_t mask_idx = new_mask_lidx();
             PropVarSetPtr p_pvs = std::make_shared<PropVarSet>(&m_solver, mask_idx);
             std::cout << *p_pvs << std::endl;
-            Value<mode> val(this, p_pvs);
+            Value<mode> val(p_pvs);
             value_vector.back() = value_vector.back() ^ val;
             value_vector.push_back(val);
         }
@@ -175,7 +175,7 @@ void Simulator<mode>::allocate_masks(Range range)
 
         lidx_t mask_idx = new_mask_lidx();
         PropVarSetPtr p_pvs = std::make_shared<PropVarSet>(&m_solver, mask_idx);
-        m_masks.emplace(std::piecewise_construct, std::forward_as_tuple(i), std::forward_as_tuple(this, p_pvs));
+        m_masks.emplace(std::piecewise_construct, std::forward_as_tuple(i), std::forward_as_tuple(p_pvs));
     }
 }
 

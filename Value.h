@@ -8,6 +8,8 @@
 #include "PropVarSet.h"
 #include "GlitchyPVS.h"
 
+using Range = std::pair<size_t, size_t>;
+
 template<verif_mode_t mode>
 class Simulator;
 
@@ -26,17 +28,25 @@ class Value
     PropVarSetPtr    m_stable_pvs;
     /// The glitchy PVS representing this value
     GlitchyPVS<mode> m_glitch_pvs;
+
+    /// The ValueView must be able to access and modify values
     friend ValueView<mode>;
 public:
+    /// Default constructor instantiating object in global context
+    constexpr Value();
 
-    /// Simple constructor from boolean value, available in all verification modes
-    explicit constexpr Value(bool val);
-
-    /// Default constructor based on boolean constructor
-    constexpr Value() : Value(false) {};
+    /// Simple boolean constructor in global context
+    explicit constexpr Value(bool val) : Value() { m_const_value = val; m_const_stable = true; }
 
     /// Constructor from PVS which is different in different verification modes
     explicit Value(PropVarSetPtr p_pvs);
+
+    /// Explicitly declared default assignment operator
+    Value<mode>& operator=(const Value<mode>& other) = default;
+
+    /// Explicitly declared ValueView assignment operator
+    Value<mode>& operator=(const ValueView<mode>& other_view);
+
 
     /// Returns whether the value is a constant in the stable verification mode
     bool is_stable_const() const
@@ -55,9 +65,9 @@ public:
     const PropVarSetPtr& stable_pvs() const;
     const GlitchyPVS<mode>& glitch_pvs() const;
 
-    /// Simplifying operator NOT (~)
+    /// Simplifying operator NOT (!)
     template<verif_mode_t M>
-    friend Value<M> operator~(const Value<M>& a);
+    friend Value<M> operator!(const Value<M>& a);
 
     /// Simplifying operator AND (&)
     template<verif_mode_t M>
@@ -70,6 +80,15 @@ public:
     /// Simplifying operator OR (|)
     template<verif_mode_t M>
     friend Value<M> operator|(const Value<M>& a, const Value<M>& b);
+
+    /// Compares two Values lexicographically
+    template<verif_mode_t M>
+    friend bool operator<(const Value<M>& a, const Value<M>& b);
+
+    /// Write Value onto output stream
+    template<verif_mode_t M>
+    friend std::ostream& operator<<(std::ostream& out, const Value<M>& val);
+
 };
 
 template <verif_mode_t mode>
@@ -83,16 +102,17 @@ public:
     explicit ValueView(Value<mode>& value) : m_value(value) {};
     ValueView& operator=(const Value<mode>& other);
     ValueView& operator=(uint64_t val);
-    Value<mode>& operator*() const { return m_value; };
+    Value<mode>& get() const { return m_value; };
 };
+
+template<verif_mode_t mode>
+using ValueVector = std::vector<Value<mode>>;
 
 template <verif_mode_t mode>
 class ValueViewVector
 {
 private:
     std::vector<ValueView<mode>> m_views;
-    using Range = std::pair<size_t, size_t>;
-
     ValueViewVector(const ValueViewVector& other, size_t up, size_t down);
 public:
     ValueViewVector() = default;
@@ -104,7 +124,8 @@ public:
     ValueView<mode>& back() { m_views.back(); }
     ValueView<mode>& front() { m_views.front(); }
     size_t size() { return m_views.size(); }
-    ValueViewVector& operator=(uint64_t val);
+    ValueViewVector& operator=(uint64_t vals);
+    ValueViewVector& operator=(const ValueVector<mode>& vals);
 };
 
 #include "Value.hpp"
