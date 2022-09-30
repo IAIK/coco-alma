@@ -5,25 +5,25 @@
 
 #define ignored __attribute__((unused))
 
-bool _and(bool a, bool b, ignored bool s = false) { return a & b; }
-bool _or(bool a, bool b, ignored bool s = false) { return a | b; }
-bool _xor(bool a, bool b, ignored bool s = false) { return a ^ b; }
+bool and_gate(bool a, bool b, ignored bool s = false) { return a & b; }
+bool or_gate(bool a, bool b, ignored bool s = false) { return a | b; }
+bool xor_gate(bool a, bool b, ignored bool s = false) { return a ^ b; }
 
-bool _nand(bool a, bool b, ignored bool s = false) { return !(a & b); }
-bool _nor(bool a, bool b, ignored bool s = false) { return !(a | b); }
-bool _xnor(bool a, bool b, ignored bool s = false) { return !(a ^ b); }
+bool nand_gate(bool a, bool b, ignored bool s = false) { return !(a & b); }
+bool nor_gate(bool a, bool b, ignored bool s = false) { return !(a | b); }
+bool xnor_gate(bool a, bool b, ignored bool s = false) { return !(a ^ b); }
 
-bool _andnot(bool a, bool b, ignored bool s = false) { return a & !b; }
-bool _ornot(bool a, bool b, ignored bool s = false) { return a | !b; }
+bool andnot_gate(bool a, bool b, ignored bool s = false) { return a & !b; }
+bool ornot_gate(bool a, bool b, ignored bool s = false) { return a | !b; }
 
-bool _not(bool a, ignored bool b = false, ignored bool s = false) { return !a; }
-bool _buf(bool a, ignored bool b = false, ignored bool s = false) { return a; }
+bool not_gate(bool a, ignored bool b = false, ignored bool s = false) { return !a; }
+bool buf_gate(bool a, ignored bool b = false, ignored bool s = false) { return a; }
 
-bool _mux(bool a, bool b, bool s) { return s ? b : a; }
-bool _nmux(bool a, bool b, bool s) { return s ? !b : !a; }
+bool mux_gate(bool a, bool b, bool s) { return s ? b : a; }
+bool nmux_gate(bool a, bool b, bool s) { return s ? !b : !a; }
 
 #define DEFINE_GATE_TEST(CELL_TYPE, FUNCTION, PORTS) \
-void test ## FUNCTION() \
+void test_ ## FUNCTION() \
 { \
     std::unordered_map<signal_id_t, bool> prev_vals; \
     std::unordered_map<signal_id_t, bool> curr_vals; \
@@ -52,57 +52,57 @@ void test ## FUNCTION() \
     } \
 }
 
-DEFINE_GATE_TEST(CELL_AND,    _and,    BinaryPorts(a, b, y))
-DEFINE_GATE_TEST(CELL_OR,     _or,     BinaryPorts(a, b, y))
-DEFINE_GATE_TEST(CELL_XOR,    _xor,    BinaryPorts(a, b, y))
-DEFINE_GATE_TEST(CELL_NAND,   _nand,   BinaryPorts(a, b, y))
-DEFINE_GATE_TEST(CELL_NOR,    _nor,    BinaryPorts(a, b, y))
-DEFINE_GATE_TEST(CELL_XNOR,   _xnor,   BinaryPorts(a, b, y))
-DEFINE_GATE_TEST(CELL_ANDNOT, _andnot, BinaryPorts(a, b, y))
-DEFINE_GATE_TEST(CELL_ORNOT,  _ornot,  BinaryPorts(a, b, y))
+DEFINE_GATE_TEST(CELL_AND,    and_gate,    BinaryPorts(a, b, y))
+DEFINE_GATE_TEST(CELL_OR,     or_gate,     BinaryPorts(a, b, y))
+DEFINE_GATE_TEST(CELL_XOR,    xor_gate,    BinaryPorts(a, b, y))
+DEFINE_GATE_TEST(CELL_NAND,   nand_gate,   BinaryPorts(a, b, y))
+DEFINE_GATE_TEST(CELL_NOR,    nor_gate,    BinaryPorts(a, b, y))
+DEFINE_GATE_TEST(CELL_XNOR,   xnor_gate,   BinaryPorts(a, b, y))
+DEFINE_GATE_TEST(CELL_ANDNOT, andnot_gate, BinaryPorts(a, b, y))
+DEFINE_GATE_TEST(CELL_ORNOT,  ornot_gate,  BinaryPorts(a, b, y))
 
-DEFINE_GATE_TEST(CELL_NOT, _not, UnaryPorts(a, y))
-DEFINE_GATE_TEST(CELL_BUF, _buf, UnaryPorts(a, y))
+DEFINE_GATE_TEST(CELL_NOT, not_gate, UnaryPorts(a, y))
+DEFINE_GATE_TEST(CELL_BUF, buf_gate, UnaryPorts(a, y))
 
-DEFINE_GATE_TEST(CELL_MUX,  _mux,  MultiplexerPorts(a, b, s, y))
-DEFINE_GATE_TEST(CELL_NMUX, _nmux, MultiplexerPorts(a, b, s, y))
+DEFINE_GATE_TEST(CELL_MUX,  mux_gate,  MultiplexerPorts(a, b, s, y))
+DEFINE_GATE_TEST(CELL_NMUX, nmux_gate, MultiplexerPorts(a, b, s, y))
 
-bool _dff_p(bool d, ignored bool q, ignored bool r = false, ignored bool e = false) { return d; }
-#define _dff_n _dff_p
+bool dff_p_reg(bool d, ignored bool q, ignored bool r = false, ignored bool e = false) { return d; }
+#define dff_n_reg dff_p_reg
 
-bool _dff_pp0(bool d, ignored bool q, bool r, ignored bool e = false) { return r == true  ? false : d; }
-bool _dff_pp1(bool d, ignored bool q, bool r, ignored bool e = false) { return r == true  ? true  : d; }
-bool _dff_pn0(bool d, ignored bool q, bool r, ignored bool e = false) { return r == false ? false : d; }
-bool _dff_pn1(bool d, ignored bool q, bool r, ignored bool e = false) { return r == false ? true  : d; }
-#define _dff_np0 _dff_pp0
-#define _dff_np1 _dff_pp1
-#define _dff_nn0 _dff_pn0
-#define _dff_nn1 _dff_pn1
+bool dff_pp0_reg(bool d, ignored bool q, bool r, ignored bool e = false) { return r == true  ? false : d; }
+bool dff_pp1_reg(bool d, ignored bool q, bool r, ignored bool e = false) { return r == true  ? true  : d; }
+bool dff_pn0_reg(bool d, ignored bool q, bool r, ignored bool e = false) { return r == false ? false : d; }
+bool dff_pn1_reg(bool d, ignored bool q, bool r, ignored bool e = false) { return r == false ? true  : d; }
+#define dff_np0_reg dff_pp0_reg
+#define dff_np1_reg dff_pp1_reg
+#define dff_nn0_reg dff_pn0_reg
+#define dff_nn1_reg dff_pn1_reg
 
-bool _dffe_pp(bool d, bool q, ignored bool r, bool e) { return e == true ? d : q; }
-bool _dffe_pn(bool d, bool q, ignored bool r, bool e) { return e == false ? d : q; }
-#define _dffe_np _dffe_pp
-#define _dffe_nn _dffe_pn
+bool dffe_pp_reg(bool d, bool q, ignored bool r, bool e) { return e == true ? d : q; }
+bool dffe_pn_reg(bool d, bool q, ignored bool r, bool e) { return e == false ? d : q; }
+#define dffe_np_reg dffe_pp_reg
+#define dffe_nn_reg dffe_pn_reg
 
-bool _dffe_pp0p(bool d, bool q, bool r, bool e) { return r == true  ? false : (e == true ? d : q); }
-bool _dffe_pp1p(bool d, bool q, bool r, bool e) { return r == true  ? true  : (e == true ? d : q); }
-bool _dffe_pn0p(bool d, bool q, bool r, bool e) { return r == false ? false : (e == true ? d : q); }
-bool _dffe_pn1p(bool d, bool q, bool r, bool e) { return r == false ? true  : (e == true ? d : q); }
-bool _dffe_pp0n(bool d, bool q, bool r, bool e) { return r == true  ? false : (e == false ? d : q); }
-bool _dffe_pp1n(bool d, bool q, bool r, bool e) { return r == true  ? true  : (e == false ? d : q); }
-bool _dffe_pn0n(bool d, bool q, bool r, bool e) { return r == false ? false : (e == false ? d : q); }
-bool _dffe_pn1n(bool d, bool q, bool r, bool e) { return r == false ? true  : (e == false ? d : q); }
-#define _dffe_np0p _dffe_pp0p
-#define _dffe_np1p _dffe_pp1p
-#define _dffe_nn0p _dffe_pn0p
-#define _dffe_nn1p _dffe_pn1p
-#define _dffe_np0n _dffe_pp0n
-#define _dffe_np1n _dffe_pp1n
-#define _dffe_nn0n _dffe_pn0n
-#define _dffe_nn1n _dffe_pn1n
+bool dffe_pp0p_reg(bool d, bool q, bool r, bool e) { return r == true  ? false : (e == true ? d : q); }
+bool dffe_pp1p_reg(bool d, bool q, bool r, bool e) { return r == true  ? true  : (e == true ? d : q); }
+bool dffe_pn0p_reg(bool d, bool q, bool r, bool e) { return r == false ? false : (e == true ? d : q); }
+bool dffe_pn1p_reg(bool d, bool q, bool r, bool e) { return r == false ? true  : (e == true ? d : q); }
+bool dffe_pp0n_reg(bool d, bool q, bool r, bool e) { return r == true  ? false : (e == false ? d : q); }
+bool dffe_pp1n_reg(bool d, bool q, bool r, bool e) { return r == true  ? true  : (e == false ? d : q); }
+bool dffe_pn0n_reg(bool d, bool q, bool r, bool e) { return r == false ? false : (e == false ? d : q); }
+bool dffe_pn1n_reg(bool d, bool q, bool r, bool e) { return r == false ? true  : (e == false ? d : q); }
+#define dffe_np0p_reg dffe_pp0p_reg
+#define dffe_np1p_reg dffe_pp1p_reg
+#define dffe_nn0p_reg dffe_pn0p_reg
+#define dffe_nn1p_reg dffe_pn1p_reg
+#define dffe_np0n_reg dffe_pp0n_reg
+#define dffe_np1n_reg dffe_pp1n_reg
+#define dffe_nn0n_reg dffe_pn0n_reg
+#define dffe_nn1n_reg dffe_pn1n_reg
 
 #define DEFINE_REGISTER_TEST(CELL_TYPE, FUNCTION, PORTS) \
-void test ## FUNCTION() \
+void test_ ## FUNCTION() \
 { \
     std::unordered_map<signal_id_t, bool> prev_vals; \
     std::unordered_map<signal_id_t, bool> curr_vals; \
@@ -139,128 +139,128 @@ void test ## FUNCTION() \
     } \
 }
 
-DEFINE_REGISTER_TEST(CELL_DFF_P, _dff_p, DffPorts(c, d, q))
-DEFINE_REGISTER_TEST(CELL_DFF_N, _dff_n, DffPorts(c, d, q))
+DEFINE_REGISTER_TEST(CELL_DFF_P, dff_p_reg, DffPorts(c, d, q))
+DEFINE_REGISTER_TEST(CELL_DFF_N, dff_n_reg, DffPorts(c, d, q))
 
-DEFINE_REGISTER_TEST(CELL_DFF_PP0, _dff_pp0, DffrPorts(c, d, q, r))
-DEFINE_REGISTER_TEST(CELL_DFF_PP1, _dff_pp1, DffrPorts(c, d, q, r))
-DEFINE_REGISTER_TEST(CELL_DFF_PN0, _dff_pn0, DffrPorts(c, d, q, r))
-DEFINE_REGISTER_TEST(CELL_DFF_PN1, _dff_pn1, DffrPorts(c, d, q, r))
-DEFINE_REGISTER_TEST(CELL_DFF_NP0, _dff_np0, DffrPorts(c, d, q, r))
-DEFINE_REGISTER_TEST(CELL_DFF_NP1, _dff_np1, DffrPorts(c, d, q, r))
-DEFINE_REGISTER_TEST(CELL_DFF_NN0, _dff_nn0, DffrPorts(c, d, q, r))
-DEFINE_REGISTER_TEST(CELL_DFF_NN1, _dff_nn1, DffrPorts(c, d, q, r))
+DEFINE_REGISTER_TEST(CELL_DFF_PP0, dff_pp0_reg, DffrPorts(c, d, q, r))
+DEFINE_REGISTER_TEST(CELL_DFF_PP1, dff_pp1_reg, DffrPorts(c, d, q, r))
+DEFINE_REGISTER_TEST(CELL_DFF_PN0, dff_pn0_reg, DffrPorts(c, d, q, r))
+DEFINE_REGISTER_TEST(CELL_DFF_PN1, dff_pn1_reg, DffrPorts(c, d, q, r))
+DEFINE_REGISTER_TEST(CELL_DFF_NP0, dff_np0_reg, DffrPorts(c, d, q, r))
+DEFINE_REGISTER_TEST(CELL_DFF_NP1, dff_np1_reg, DffrPorts(c, d, q, r))
+DEFINE_REGISTER_TEST(CELL_DFF_NN0, dff_nn0_reg, DffrPorts(c, d, q, r))
+DEFINE_REGISTER_TEST(CELL_DFF_NN1, dff_nn1_reg, DffrPorts(c, d, q, r))
 
-DEFINE_REGISTER_TEST(CELL_DFFE_PP, _dffe_pp, DffePorts(c, d, q, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_PN, _dffe_pn, DffePorts(c, d, q, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_NP, _dffe_np, DffePorts(c, d, q, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_NN, _dffe_nn, DffePorts(c, d, q, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_PP, dffe_pp_reg, DffePorts(c, d, q, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_PN, dffe_pn_reg, DffePorts(c, d, q, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_NP, dffe_np_reg, DffePorts(c, d, q, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_NN, dffe_nn_reg, DffePorts(c, d, q, e))
 
-DEFINE_REGISTER_TEST(CELL_DFFE_PP0P, _dffe_pp0p, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_PP1P, _dffe_pp1p, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_PN0P, _dffe_pn0p, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_PN1P, _dffe_pn1p, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_PP0N, _dffe_pp0n, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_PP1N, _dffe_pp1n, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_PN0N, _dffe_pn0n, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_PN1N, _dffe_pn1n, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_NP0P, _dffe_np0p, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_NP1P, _dffe_np1p, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_NN0P, _dffe_nn0p, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_NN1P, _dffe_nn1p, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_NP0N, _dffe_np0n, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_NP1N, _dffe_np1n, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_NN0N, _dffe_nn0n, DfferPorts(c, d, q, r, e))
-DEFINE_REGISTER_TEST(CELL_DFFE_NN1N, _dffe_nn1n, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_PP0P, dffe_pp0p_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_PP1P, dffe_pp1p_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_PN0P, dffe_pn0p_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_PN1P, dffe_pn1p_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_PP0N, dffe_pp0n_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_PP1N, dffe_pp1n_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_PN0N, dffe_pn0n_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_PN1N, dffe_pn1n_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_NP0P, dffe_np0p_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_NP1P, dffe_np1p_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_NN0P, dffe_nn0p_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_NN1P, dffe_nn1p_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_NP0N, dffe_np0n_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_NP1N, dffe_np1n_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_NN0N, dffe_nn0n_reg, DfferPorts(c, d, q, r, e))
+DEFINE_REGISTER_TEST(CELL_DFFE_NN1N, dffe_nn1n_reg, DfferPorts(c, d, q, r, e))
 
 int main(int argc, char* argv[])
 {
     if (argc != 2) return 1;
-    const std::string test_name = argv[1];
-    if (test_name == STR(test_and))
-        test_and();
-    else if (test_name == STR(test_or))
-        test_or();
-    else if (test_name == STR(test_xor))
-        test_xor();
-    else if (test_name == STR(test_nand))
-        test_nand();
-    else if (test_name == STR(test_nor))
-        test_nor();
-    else if (test_name == STR(test_xnor))
-        test_xnor();
-    else if (test_name == STR(test_andnot))
-        test_andnot();
-    else if (test_name == STR(test_ornot))
-        test_ornot();
-    else if (test_name == STR(test_not))
-        test_not();
-    else if (test_name == STR(test_buf))
-        test_buf();
-    else if (test_name == STR(test_mux))
-        test_mux();
-    else if (test_name == STR(test_nmux))
-        test_nmux();
-    else if (test_name == STR(test_dff_p))
-        test_dff_p();
-    else if (test_name == STR(test_dff_n))
-        test_dff_n();
-    else if (test_name == STR(test_dff_pp0))
-        test_dff_pp0();
-    else if (test_name == STR(test_dff_np0))
-        test_dff_np0();
-    else if (test_name == STR(test_dff_pp1))
-        test_dff_pp1();
-    else if (test_name == STR(test_dff_np1))
-        test_dff_np1();
-    else if (test_name == STR(test_dff_pn0))
-        test_dff_pn0();
-    else if (test_name == STR(test_dff_nn0))
-        test_dff_nn0();
-    else if (test_name == STR(test_dff_pn1))
-        test_dff_pn1();
-    else if (test_name == STR(test_dff_nn1))
-        test_dff_nn1();
-    else if (test_name == STR(test_dffe_pp))
-        test_dffe_pp();
-    else if (test_name == STR(test_dffe_pn))
-        test_dffe_pn();
-    else if (test_name == STR(test_dffe_np))
-        test_dffe_np();
-    else if (test_name == STR(test_dffe_nn))
-        test_dffe_nn();
-    else if (test_name == STR(test_dffe_pp0p))
-        test_dffe_pp0p();
-    else if (test_name == STR(test_dffe_pp1p))
-        test_dffe_pp1p();
-    else if (test_name == STR(test_dffe_pn0p))
-        test_dffe_pn0p();
-    else if (test_name == STR(test_dffe_pn1p))
-        test_dffe_pn1p();
-    else if (test_name == STR(test_dffe_pp0n))
-        test_dffe_pp0n();
-    else if (test_name == STR(test_dffe_pp1n))
-        test_dffe_pp1n();
-    else if (test_name == STR(test_dffe_pn0n))
-        test_dffe_pn0n();
-    else if (test_name == STR(test_dffe_pn1n))
-        test_dffe_pn1n();
-    else if (test_name == STR(test_dffe_np0p))
-        test_dffe_np0p();
-    else if (test_name == STR(test_dffe_np1p))
-        test_dffe_np1p();
-    else if (test_name == STR(test_dffe_nn0p))
-        test_dffe_nn0p();
-    else if (test_name == STR(test_dffe_nn1p))
-        test_dffe_nn1p();
-    else if (test_name == STR(test_dffe_np0n))
-        test_dffe_np0n();
-    else if (test_name == STR(test_dffe_np1n))
-        test_dffe_np1n();
-    else if (test_name == STR(test_dffe_nn0n))
-        test_dffe_nn0n();
-    else if (test_name == STR(test_dffe_nn1n))
-        test_dffe_nn1n();
+    const std::string test_Name = argv[1];
+    if (test_Name == STR(test_and_gate))
+        test_and_gate();
+    else if (test_Name == STR(test_or_gate))
+        test_or_gate();
+    else if (test_Name == STR(test_xor_gate))
+        test_xor_gate();
+    else if (test_Name == STR(test_nand_gate))
+        test_nand_gate();
+    else if (test_Name == STR(test_nor_gate))
+        test_nor_gate();
+    else if (test_Name == STR(test_xnor_gate))
+        test_xnor_gate();
+    else if (test_Name == STR(test_andnot_gate))
+        test_andnot_gate();
+    else if (test_Name == STR(test_ornot_gate))
+        test_ornot_gate();
+    else if (test_Name == STR(test_not_gate))
+        test_not_gate();
+    else if (test_Name == STR(test_buf_gate))
+        test_buf_gate();
+    else if (test_Name == STR(test_mux_gate))
+        test_mux_gate();
+    else if (test_Name == STR(test_nmux_gate))
+        test_nmux_gate();
+    else if (test_Name == STR(test_dff_p_reg))
+        test_dff_p_reg();
+    else if (test_Name == STR(test_dff_n_reg))
+        test_dff_n_reg();
+    else if (test_Name == STR(test_dff_pp0_reg))
+        test_dff_pp0_reg();
+    else if (test_Name == STR(test_dff_np0_reg))
+        test_dff_np0_reg();
+    else if (test_Name == STR(test_dff_pp1_reg))
+        test_dff_pp1_reg();
+    else if (test_Name == STR(test_dff_np1_reg))
+        test_dff_np1_reg();
+    else if (test_Name == STR(test_dff_pn0_reg))
+        test_dff_pn0_reg();
+    else if (test_Name == STR(test_dff_nn0_reg))
+        test_dff_nn0_reg();
+    else if (test_Name == STR(test_dff_pn1_reg))
+        test_dff_pn1_reg();
+    else if (test_Name == STR(test_dff_nn1_reg))
+        test_dff_nn1_reg();
+    else if (test_Name == STR(test_dffe_pp_reg))
+        test_dffe_pp_reg();
+    else if (test_Name == STR(test_dffe_pn_reg))
+        test_dffe_pn_reg();
+    else if (test_Name == STR(test_dffe_np_reg))
+        test_dffe_np_reg();
+    else if (test_Name == STR(test_dffe_nn_reg))
+        test_dffe_nn_reg();
+    else if (test_Name == STR(test_dffe_pp0p_reg))
+        test_dffe_pp0p_reg();
+    else if (test_Name == STR(test_dffe_pp1p_reg))
+        test_dffe_pp1p_reg();
+    else if (test_Name == STR(test_dffe_pn0p_reg))
+        test_dffe_pn0p_reg();
+    else if (test_Name == STR(test_dffe_pn1p_reg))
+        test_dffe_pn1p_reg();
+    else if (test_Name == STR(test_dffe_pp0n_reg))
+        test_dffe_pp0n_reg();
+    else if (test_Name == STR(test_dffe_pp1n_reg))
+        test_dffe_pp1n_reg();
+    else if (test_Name == STR(test_dffe_pn0n_reg))
+        test_dffe_pn0n_reg();
+    else if (test_Name == STR(test_dffe_pn1n_reg))
+        test_dffe_pn1n_reg();
+    else if (test_Name == STR(test_dffe_np0p_reg))
+        test_dffe_np0p_reg();
+    else if (test_Name == STR(test_dffe_np1p_reg))
+        test_dffe_np1p_reg();
+    else if (test_Name == STR(test_dffe_nn0p_reg))
+        test_dffe_nn0p_reg();
+    else if (test_Name == STR(test_dffe_nn1p_reg))
+        test_dffe_nn1p_reg();
+    else if (test_Name == STR(test_dffe_np0n_reg))
+        test_dffe_np0n_reg();
+    else if (test_Name == STR(test_dffe_np1n_reg))
+        test_dffe_np1n_reg();
+    else if (test_Name == STR(test_dffe_nn0n_reg))
+        test_dffe_nn0n_reg();
+    else if (test_Name == STR(test_dffe_nn1n_reg))
+        test_dffe_nn1n_reg();
     else
         return 1;
     return 0;

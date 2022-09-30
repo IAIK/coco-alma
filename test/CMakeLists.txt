@@ -46,51 +46,54 @@ target_include_directories(unit-cell PUBLIC "${PROJECT_SOURCE_DIR}")
 # target_link_libraries(unit-cell ${SOLVER_LIB_NAME})
 
 set(UNIT_CELL_TESTS
-  test_and
-  test_or
-  test_xor
-  test_nand
-  test_nor
-  test_xnor
-  test_andnot
-  test_ornot
+  test_and_gate
+  test_or_gate
+  test_xor_gate
+  test_nand_gate
+  test_nor_gate
+  test_xnor_gate
+  test_andnot_gate
+  test_ornot_gate
 
-  test_not
-  test_buf
+  test_not_gate
+  test_buf_gate
 
-  test_dff_p
-  test_dff_n
+  test_mux_gate
+  test_nmux_gate
 
-  test_dff_pp0
-  test_dff_pp1
-  test_dff_pn0
-  test_dff_pn1
-  test_dff_np0
-  test_dff_np1
-  test_dff_nn0
-  test_dff_nn1
+  test_dff_p_reg
+  test_dff_n_reg
 
-  test_dffe_pp
-  test_dffe_pn
-  test_dffe_np
-  test_dffe_nn
+  test_dff_pp0_reg
+  test_dff_pp1_reg
+  test_dff_pn0_reg
+  test_dff_pn1_reg
+  test_dff_np0_reg
+  test_dff_np1_reg
+  test_dff_nn0_reg
+  test_dff_nn1_reg
 
-  test_dffe_pp0p
-  test_dffe_pp1p
-  test_dffe_pn0p
-  test_dffe_pn1p
-  test_dffe_pp0n
-  test_dffe_pp1n
-  test_dffe_pn0n
-  test_dffe_pn1n
-  test_dffe_np0p
-  test_dffe_np1p
-  test_dffe_nn0p
-  test_dffe_nn1p
-  test_dffe_np0n
-  test_dffe_np1n
-  test_dffe_nn0n
-  test_dffe_nn1n
+  test_dffe_pp_reg
+  test_dffe_pn_reg
+  test_dffe_np_reg
+  test_dffe_nn_reg
+
+  test_dffe_pp0p_reg
+  test_dffe_pp1p_reg
+  test_dffe_pn0p_reg
+  test_dffe_pn1p_reg
+  test_dffe_pp0n_reg
+  test_dffe_pp1n_reg
+  test_dffe_pn0n_reg
+  test_dffe_pn1n_reg
+  test_dffe_np0p_reg
+  test_dffe_np1p_reg
+  test_dffe_nn0p_reg
+  test_dffe_nn1p_reg
+  test_dffe_np0n_reg
+  test_dffe_np1n_reg
+  test_dffe_nn0n_reg
+  test_dffe_nn1n_reg
   )
 
 foreach(TEST_NAME ${UNIT_CELL_TESTS})
