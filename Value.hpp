@@ -397,4 +397,34 @@ ValueViewVector<mode>& ValueViewVector<mode>::operator=(const ValueVector<mode>&
     return *this;
 }
 
+template <verif_mode_t mode>
+bool ValueViewVector<mode>::is_const()
+{
+    for (uint32_t i = 0; i < size(); i++)
+    {
+        if (!m_views[i].get().is_stable_const()) return false;
+    }
+    return true;
+}
+
+template <verif_mode_t mode>
+uint64_t ValueViewVector<mode>::as_uint64_t()
+{
+    if (!is_const())
+        { throw std::logic_error(ILLEGAL_VALUE_NOT_CONST); }
+
+    uint64_t res = 0;
+    for (uint32_t i = 0; i < size() && i < 64; i++)
+        { res |= ((uint64_t)m_views[i].get().stable_val()) << i; }
+    return res;
+}
+
+template <verif_mode_t mode>
+std::ostream& operator<<(std::ostream& out, const ValueViewVector<mode>& view_vector)
+{
+    for(uint32_t i = 0; i < view_vector.size(); i++)
+        { out << view_vector.m_views[i].get() << " "; }
+    return out;
+}
+
 #endif // VALUE_H

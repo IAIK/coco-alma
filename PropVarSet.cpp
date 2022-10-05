@@ -11,7 +11,7 @@ PropVarSet::PropVarSet(SatSolver* sol, lidx_t id) :
 {
     // Just set that one position to 1
     m_vars[id] = ONE;
-    DEBUG(0) << "CREATE " << *this << std::endl;
+    DEBUG(1) << "CREATE " << *this << std::endl;
 }
 
 var_t PropVarSet::operator[](const lidx_t& pos) const
@@ -56,14 +56,14 @@ PropVarSetPtr operator^(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs
         }
         p_res->m_vars[label] = r;
     }
-    DEBUG(0) << "CALC " << *p_pvs_a << " ^ " << *p_pvs_b << " = " << *p_res << std::endl;
+    DEBUG(1) << "CALC " << *p_pvs_a << " ^ " << *p_pvs_b << " = " << *p_res << std::endl;
     return p_res;
 }
 
 PropVarSetPtr operator+(const PropVarSetPtr& p_pvs)
 {
     PropVarSetPtr p_res = bias(p_pvs);
-    DEBUG(0) << "CALC +" << *p_pvs << " = " << *p_res << std::endl;
+    DEBUG(1) << "CALC +" << *p_pvs << " = " << *p_res << std::endl;
     return p_res;
 }
 
@@ -181,7 +181,7 @@ PropVarSetPtr operator&(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs
     // Use encoding through XOR of biased inputs
     PropVarSetPtr p_res = +p_pvs_a ^ +p_pvs_b;
     #endif
-    DEBUG(0) << "CALC " << *p_pvs_a << " & " << *p_pvs_b << " = " << *p_res << std::endl;
+    DEBUG(1) << "CALC " << *p_pvs_a << " & " << *p_pvs_b << " = " << *p_res << std::endl;
     return p_res;
 }
 
@@ -194,7 +194,7 @@ PropVarSetPtr operator|(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs
     // In case the sets are trivially the same, return biased copy
     if (p_pvs_a.get() == p_pvs_b.get() || *p_pvs_a == *p_pvs_b)
     {
-        DEBUG(0) << "CALC " << *p_pvs_a << " | " << *p_pvs_b << " = " << *p_pvs_a << std::endl;
+        DEBUG(1) << "CALC " << *p_pvs_a << " | " << *p_pvs_b << " = " << *p_pvs_a << std::endl;
         return p_pvs_a;
     }
 
@@ -254,7 +254,7 @@ PropVarSetPtr operator|(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs
         const var_t a = var_it_large.second;
         var_it_large.second = solver->make_and(a, p);
     }
-    DEBUG(0) << "CALC " << *p_pvs_a << " | " << *p_pvs_b << " = " << *p_res << std::endl;
+    DEBUG(1) << "CALC " << *p_pvs_a << " | " << *p_pvs_b << " = " << *p_res << std::endl;
     return p_res;
 }
 

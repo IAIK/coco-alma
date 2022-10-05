@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(coco-cpp)
 enable_testing()
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(COCO_SOURCES coco.cpp SatSolver.cpp PropVarSet.cpp Cell.cpp Circuit.cpp Value.cpp Simulator.cpp)
 set(COCO_HEADERS coco.cpp SatSolver.h PropVarSet.h cell_types.h Circuit.h Value.h Value.hpp Simulator.h GlitchyPVS.h)
 

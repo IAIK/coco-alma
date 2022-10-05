@@ -3,11 +3,14 @@
 #include "SatSolver.h"
 
 SatSolver::SatSolver() :
-        m_num_vars(0), m_solver(ipasir_init()), m_state(STATE_INPUT)
+        m_state(STATE_INPUT), m_num_vars(0), m_num_clauses(0), m_solver(ipasir_init())
 { }
 
 SatSolver::~SatSolver()
 {
+    DEBUG(0) << "Solver xor cache has " << m_xor_cache.size() << " entries." << std::endl;
+    DEBUG(0) << "Solver and cache has " << m_and_cache.size() << " entries." << std::endl;
+
     ipasir_release(m_solver);
 }
 

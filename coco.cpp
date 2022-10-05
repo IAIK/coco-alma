@@ -68,8 +68,8 @@ int main()
 
     // sim["i_pt1"] = 0xf2ab9aeb45079458LU;
     // sim["i_pt2"] = 0xf2ab9aeb45079458LU;
-    sim["i_pt1"] = sim.shares({191, 128}, 0);
-    sim["i_pt2"] = sim.shares({191, 128}, 1);
+    sim["i_pt1"] = sim.ith_share({191, 128}, 0);
+    sim["i_pt2"] = sim.ith_share({191, 128}, 1);
 
 //    sim["i_key1"][{ 31,  0}] = 0xb101598e;
 //    sim["i_key1"][{ 63, 32}] = 0x29cfa5cc;
@@ -81,8 +81,8 @@ int main()
 //    sim["i_key2"][{ 95, 64}] = 0x2fa459bd;
 //    sim["i_key2"][{127, 96}] = 0xfe7e5441;
 
-    sim["i_key1"] = sim.shares({127, 0}, 0);
-    sim["i_key2"] = sim.shares({127, 0}, 1);
+    sim["i_key1"] = sim.ith_share({127, 0}, 0);
+    sim["i_key2"] = sim.ith_share({127, 0}, 1);
 
     sim["i_load"] = 1;
     sim["i_start"] = 0;
@@ -107,6 +107,7 @@ int main()
         sim.step();
         cycles += 1;
         std::cout << cycles << std::endl;
+        if (cycles == 6) break;
     }
 
     sim.step();

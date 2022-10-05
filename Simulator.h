@@ -47,8 +47,11 @@ public:
     void allocate_secrets(Range range, size_t num_shares);
     /// Allocates mask identifiers in range \a range
     void allocate_masks(Range range);
-    /// Get the ith share of all secrets in \a range
-    ValueVector<mode> shares(Range range, size_t which_share);
+    /// Get the ith share of secrets in \a secret_range
+    ValueVector<mode> ith_share(Range secret_range, size_t which_share);
+    /// Get shares in \a share_range of the ith secret
+    ValueVector<mode> ith_secret(Range share_range, size_t which_secret);
+
     /// Get the ith share of all secrets in \a range
     ValueVector<mode> masks(Range range);
 
@@ -119,7 +122,7 @@ void Simulator<mode>::step_cycle()
     for (const Cell* cell : m_cells)
         { cell->eval<Value<mode>, ValueView<mode>>(prev_cycle, curr_cycle); }
     m_prepared = false;
-    std::cout << "There are " << m_solver.num_vars() << " variables" << std::endl;
+    std::cout << "There are " << m_solver.num_vars() << " variables and " << m_solver.num_clauses() << " clauses" << std::endl;
 }
 
 template <verif_mode_t mode>
@@ -190,10 +193,10 @@ ValueViewVector<mode> Simulator<mode>::operator[](const std::string& name)
 }
 
 template<verif_mode_t mode>
-ValueVector<mode> Simulator<mode>::shares(const Range range, const size_t which_share)
+ValueVector<mode> Simulator<mode>::ith_share(const Range secret_range, const size_t which_share)
 {
-    const size_t front = range.second;
-    const size_t back = range.first;
+    const size_t front = secret_range.second;
+    const size_t back = secret_range.first;
     const size_t direction = (front < back) ? 1 : -1;
 
     ValueVector<mode> result;
@@ -201,6 +204,24 @@ ValueVector<mode> Simulator<mode>::shares(const Range range, const size_t which_
     for (size_t i = front; ; i += direction)
     {
         result.push_back(m_secrets.at(i).at(which_share));
+        if (i == back) break;
+    }
+
+    return result;
+}
+
+template<verif_mode_t mode>
+ValueVector<mode> Simulator<mode>::ith_secret(const Range share_range, const size_t which_secret)
+{
+    const size_t front = share_range.second;
+    const size_t back = share_range.first;
+    const size_t direction = (front < back) ? 1 : -1;
+
+    ValueVector<mode> result;
+    result.reserve(std::abs((int64_t)front - (int64_t)back) + 1);
+    for (size_t i = front; ; i += direction)
+    {
+        result.push_back(m_secrets.at(which_secret).at(i));
         if (i == back) break;
     }
 

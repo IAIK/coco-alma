@@ -123,9 +123,13 @@ public:
     void pop_back() { m_views.pop_back(); }
     ValueView<mode>& back() { m_views.back(); }
     ValueView<mode>& front() { m_views.front(); }
-    size_t size() { return m_views.size(); }
+    size_t size() const { return m_views.size(); }
     ValueViewVector& operator=(uint64_t vals);
     ValueViewVector& operator=(const ValueVector<mode>& vals);
+    bool is_const();
+    uint64_t as_uint64_t();
+    template <verif_mode_t M>
+    friend std::ostream& operator<<(std::ostream& out, const ValueViewVector<M>& view_vector);
 };
 
 #include "Value.hpp"

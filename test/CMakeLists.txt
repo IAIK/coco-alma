@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 
 include(CTest)
+
+###### Unit test suite for the SatSolver class ######
+
 set(UNIT_SOLVER_SRC ../SatSolver.cpp unit-solver.cpp)
 add_executable(unit-solver ${UNIT_SOLVER_SRC})
 target_include_directories(unit-solver PUBLIC "${PROJECT_SOURCE_DIR}")
@@ -23,6 +26,8 @@ add_test(NAME unit-solver:${TEST_NAME}
   WORKING_DIRECTORY .)
 endforeach()
 
+###### Unit test suite for the PropVarSet class ######
+
 set(UNIT_PVS_SRC ../PropVarSet.cpp ../SatSolver.cpp unit-pvs.cpp)
 add_executable(unit-pvs ${UNIT_PVS_SRC})
 target_include_directories(unit-pvs PUBLIC "${PROJECT_SOURCE_DIR}")
@@ -39,6 +44,8 @@ foreach(TEST_NAME ${UNIT_PVS_TESTS})
       COMMAND unit-pvs ${TEST_NAME}
       WORKING_DIRECTORY .)
 endforeach()
+
+###### Unit test suite for the Cell class eval function ######
 
 set(UNIT_CELL_SRC ../Cell.cpp unit-cell.cpp)
 add_executable(unit-cell ${UNIT_CELL_SRC})
@@ -100,4 +107,38 @@ foreach(TEST_NAME ${UNIT_CELL_TESTS})
     add_test(NAME unit-cell:${TEST_NAME}
       COMMAND unit-cell ${TEST_NAME}
       WORKING_DIRECTORY .)
+endforeach()
+
+###### Unit test suite for the Simulator class using small verilog designs ######
+
+set(UNIT_SIM_GADGETS_SRC ../Simulator.cpp ../Circuit.cpp ../Cell.cpp ../SatSolver.cpp ../Value.cpp ../PropVarSet.cpp unit-sim-gadgets.cpp)
+add_executable(unit-sim-gadgets ${UNIT_SIM_GADGETS_SRC})
+target_include_directories(unit-sim-gadgets PUBLIC "${PROJECT_SOURCE_DIR}")
+target_include_directories(unit-sim-gadgets PUBLIC "${PROJECT_SOURCE_DIR}/json/single_include/nlohmann")
+target_link_libraries(unit-sim-gadgets ${SOLVER_LIB_NAME})
+
+set(UNIT_SIM_DOM_AND_TEST_2_R dom_and random "gadgets/synthd/dom_and_2.json")
+set(UNIT_SIM_DOM_AND_TEST_3_R dom_and random "gadgets/synthd/dom_and_3.json")
+set(UNIT_SIM_DOM_AND_TEST_4_R dom_and random "gadgets/synthd/dom_and_4.json")
+
+set(UNIT_SIM_DOM_AND_TEST_2_P dom_and pvs "gadgets/synthd/dom_and_2.json")
+set(UNIT_SIM_DOM_AND_TEST_3_P dom_and pvs "gadgets/synthd/dom_and_3.json")
+set(UNIT_SIM_DOM_AND_TEST_4_P dom_and pvs "gadgets/synthd/dom_and_4.json")
+
+set(UNIT_SIM_GADGET_TESTS
+  UNIT_SIM_DOM_AND_TEST_2_R
+  UNIT_SIM_DOM_AND_TEST_3_R
+  UNIT_SIM_DOM_AND_TEST_4_R
+
+  UNIT_SIM_DOM_AND_TEST_2_P
+  UNIT_SIM_DOM_AND_TEST_3_P
+  UNIT_SIM_DOM_AND_TEST_4_P
+  )
+
+foreach(TEST_VAR ${UNIT_SIM_GADGET_TESTS})
+    set(TEST_ARGS ${${TEST_VAR}})
+    list(JOIN TEST_ARGS ":" TEST_STR)
+    add_test(NAME unit-sim-gadgets:${TEST_STR}
+      COMMAND unit-sim-gadgets ${TEST_ARGS}
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/test")
 endforeach()

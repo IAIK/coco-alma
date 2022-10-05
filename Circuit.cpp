@@ -227,7 +227,7 @@ Circuit::Circuit(const std::string& json_file_path, const std::string& top_modul
                 visited_sig.insert(ports.m_unr.m_out_y);
             }
             else if (is_binary(type) && sig_visited(ports.m_bin.m_in_a)
-                                        && sig_visited(ports.m_bin.m_in_b))
+                                     && sig_visited(ports.m_bin.m_in_b))
             {
                 visited_sig.insert(ports.m_bin.m_out_y);
             }
