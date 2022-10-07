@@ -70,6 +70,8 @@ public:
     inline int num_vars() noexcept;
     /// Returns the number of currently added clauses
     inline int num_clauses() noexcept;
+    /// Returns the current state of the solver
+    inline state_t state() { return m_state; }
 
     /// Creates a new variable representing the xor of \a a and \a b
     var_t make_xor(var_t a, var_t b);

@@ -85,6 +85,13 @@ public:
     template<verif_mode_t M>
     friend bool operator<(const Value<M>& a, const Value<M>& b);
 
+    /// Compares two Values lexicographically
+    template<verif_mode_t M>
+    friend bool operator==(const Value<M>& a, const Value<M>& b);
+
+    template<verif_mode_t M>
+    friend bool operator!=(const Value<M>& a, const Value<M>& b);
+
     /// Write Value onto output stream
     template<verif_mode_t M>
     friend std::ostream& operator<<(std::ostream& out, const Value<M>& val);

@@ -264,20 +264,39 @@ bool operator<(const Value<mode>& a, const Value<mode>& b)
 }
 
 template<verif_mode_t mode>
+bool operator==(const Value<mode>& a, const Value<mode>& b)
+{
+    a.sanity();
+    b.sanity();
+    if (a.m_glitch_pvs.get() != b.m_glitch_pvs.get()) return false;
+    if (a.m_stable_pvs.get() != b.m_stable_pvs.get()) return false;
+    if (a.m_const_stable != b.m_const_stable) return false;
+    if (a.m_const_value != b.m_const_value) return false;
+    return true;
+}
+
+template<verif_mode_t mode>
+bool operator!=(const Value<mode>& a, const Value<mode>& b)
+{
+    return !(a == b);
+}
+
+template<verif_mode_t mode>
 std::ostream& operator<<(std::ostream& out, const Value<mode>& val)
 {
-    out << "Value {";
+    if((val.is_glitch_const() && has_glitches(mode)) || val.is_stable_const())
+    {
+        out << val.m_const_value;
+        return out;
+    }
+    out << "{";
     if (!val.is_stable_const())
     {
-        out << "stable: " << *val.m_stable_pvs;
+        out << "stable:" << *val.m_stable_pvs;
     }
     if (has_glitches(mode) && !val.is_glitch_const())
     {
-        out << "glitch: " << *val.m_glitch_pvs;
-    }
-    if((val.is_glitch_const() && has_glitches(mode)) || val.is_stable_const())
-    {
-        out << "const:" << "(" << val.m_const_value << ")" << " behavior: " << (val.m_const_stable ? "stable" : "glitchy");
+        out << "glitch:" << *val.m_glitch_pvs;
     }
     out << "}";
     return out;

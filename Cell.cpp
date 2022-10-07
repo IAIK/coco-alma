@@ -58,6 +58,22 @@ signal_id_t signal_from_str(const std::string& s)
     throw std::logic_error(ILLEGAL_SIGNAL_STRING);
 }
 
+std::string vcd_identifier(signal_id_t sig)
+{
+    // The identifier code is composed of the printable characters which are in the
+    // ASCII character set from ! to ~ (33 to 126).
+    constexpr uint32_t MODULUS = (uint32_t)'~' - (uint32_t)'!' + 1;
+    std::string result;
+    result.reserve(6);
+    auto sig_num = static_cast<uint32_t>(sig);
+    do
+    {
+        const uint32_t remainder = (sig_num % MODULUS);
+        result.push_back((char)('!' + remainder));
+        sig_num = sig_num / MODULUS;
+    } while (sig_num);
+    return result;
+}
 
 Cell::Cell(std::string c_name, cell_type_t c_type, UnaryPorts c_ports) :
         m_name(std::move(c_name)), m_type(c_type)

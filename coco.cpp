@@ -107,10 +107,13 @@ int main()
         sim.step();
         cycles += 1;
         std::cout << cycles << std::endl;
-        if (cycles == 6) break;
+        if (cycles == 4) break;
     }
 
-    sim.step();
+    // sim.step();
+
+    sim.m_solver.check();
+    sim.dump_vcd("/tmp/tmp.vcd");
 
     return 0;
 }

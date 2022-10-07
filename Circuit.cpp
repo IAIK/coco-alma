@@ -5,7 +5,8 @@
 #include "json.hpp"
 using json = nlohmann::json;
 
-Circuit::Circuit(const std::string& json_file_path, const std::string& top_module_name)
+Circuit::Circuit(const std::string& json_file_path, const std::string& top_module_name) :
+    m_module_name(top_module_name), m_sig_clock(signal_id_t::S_0)
 {
     std::ifstream f; f.exceptions(std::ifstream::badbit);
     f.open(json_file_path);
@@ -177,8 +178,10 @@ Circuit::Circuit(const std::string& json_file_path, const std::string& top_modul
     }
 
     // Check that the clock edge matches on all registers
+    // Also check that all registers have the same clock
     bool found_pos_edge = false;
     bool found_neg_edge = false;
+
     for (const Cell* p_cell : m_cells)
     {
         if (!is_register(p_cell->type())) continue;
@@ -186,6 +189,25 @@ Circuit::Circuit(const std::string& json_file_path, const std::string& top_modul
         found_pos_edge |= clock_trigger;
         if (!clock_trigger) std::cout << p_cell->name() << std::endl;
         found_neg_edge |= !clock_trigger;
+
+        if (m_sig_clock == signal_id_t::S_0)
+        {
+            if (p_cell->m_ports.m_dff.m_in_c == signal_id_t::S_0 ||
+                p_cell->m_ports.m_dff.m_in_c == signal_id_t::S_1 ||
+                p_cell->m_ports.m_dff.m_in_c == signal_id_t::S_X ||
+                p_cell->m_ports.m_dff.m_in_c == signal_id_t::S_Z)
+                { throw std::logic_error(ILLEGAL_CLOCK_SIGNAL); }
+            m_sig_clock = p_cell->m_ports.m_dff.m_in_c;
+        }
+        else
+        {
+            if (p_cell->m_ports.m_dff.m_in_c != m_sig_clock)
+                { throw std::logic_error(ILLEGAL_MULTIPLE_CLOCKS); }
+        }
+        // Technically this could not hold due to compiler shenanigans
+        assert((&(p_cell->m_ports.m_dff.m_in_c)) == (&(p_cell->m_ports.m_dffr.m_in_c)));
+        assert((&(p_cell->m_ports.m_dff.m_in_c)) == (&(p_cell->m_ports.m_dffe.m_in_c)));
+        assert((&(p_cell->m_ports.m_dff.m_in_c)) == (&(p_cell->m_ports.m_dffer.m_in_c)));
     }
 
     if (found_neg_edge && found_pos_edge)

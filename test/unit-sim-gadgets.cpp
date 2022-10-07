@@ -81,7 +81,7 @@ int test_random_dom_and(const char* path)
 
 int test_pvs_dom_and(const char* path)
 {
-    constexpr verif_mode_t mode = verif_mode_t::MODE_STABLE;
+    constexpr verif_mode_t mode = verif_mode_t::MODE_GLITCH;
     using Simulator = Simulator<mode>;
     using Value = Value<mode>;
     using ValueView = ValueView<mode>;
@@ -105,6 +105,12 @@ int test_pvs_dom_and(const char* path)
     std::cout << "RightDI: " << sim["RightDI"] << std::endl;
     std::cout << "RandomDI: " << sim["RandomDI"] << std::endl;
     std::cout << "OutDO: " << sim["OutDO"] << std::endl;
+    std::string out_name = path;
+    out_name.erase(out_name.rfind(".json"));
+    sim.dump_vcd(out_name + ".pre.vcd");
+    SatSolver::state_t res = sim.m_solver.check();
+    assert(res == SatSolver::STATE_SAT);
+    sim.dump_vcd(out_name + ".sat.vcd");
     return 0;
 }
 

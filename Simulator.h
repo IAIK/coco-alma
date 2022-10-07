@@ -7,11 +7,15 @@
 #include "Value.h"
 #include "SatSolver.h"
 #include <map>
+#include <fstream>
+#include <chrono>
 
 template<verif_mode_t mode>
 class Simulator : protected Circuit
 {
+public:
     SatSolver m_solver;
+private:
     bool m_prepared;
     using SimulatorValueMap = std::unordered_map<signal_id_t, Value<mode>>;
     std::list<SimulatorValueMap> m_trace;
@@ -25,6 +29,7 @@ class Simulator : protected Circuit
     inline lidx_t new_mask_lidx() { lidx_t res = new_lidx(); m_mask_indexes.push_back(res); return res; }
 
     std::unordered_map<size_t, ValueVector<mode>> m_secrets;
+    std::unordered_map<size_t, lidx_t> m_check_lidx;
     std::unordered_map<size_t, Value<mode>> m_masks;
 
     using ValueLookupKey = std::pair<Value<mode>, Value<mode>>;
@@ -51,11 +56,13 @@ public:
     ValueVector<mode> ith_share(Range secret_range, size_t which_share);
     /// Get shares in \a share_range of the ith secret
     ValueVector<mode> ith_secret(Range share_range, size_t which_secret);
-
     /// Get the ith share of all secrets in \a range
     ValueVector<mode> masks(Range range);
-
+    /// Get the values of wires corresponding to \a name
     ValueViewVector<mode> operator[](const std::string& name);
+
+    /// Dump the current trace (either assigned or unassigned) as a VCD file
+    void dump_vcd(const std::string& file_name);
 
     auto and_find(ValueLookupKey p) const { return m_and_map.find(p); }
     auto and_end() const { return m_and_map.end(); }
@@ -148,6 +155,7 @@ void Simulator<mode>::allocate_secrets(const Range range, const size_t num_share
 
         value_vector.clear();
         lidx_t secret_idx = new_secret_lidx();
+        m_check_lidx.emplace(i, secret_idx);
         std::cout << secret_idx << std::endl;
         {  // Create a local scope here since the value should be inaccessible later
             PropVarSetPtr p_pvs = std::make_shared<PropVarSet>(&m_solver, secret_idx);
@@ -244,6 +252,114 @@ ValueVector<mode> Simulator<mode>::masks(const Range range)
     }
 
     return result;
+}
+
+template<verif_mode_t mode>
+void Simulator<mode>::dump_vcd(const std::string& file_name)
+{
+    std::ofstream out(file_name);
+
+    // Print the current time
+    {
+        auto now_timepoint = std::chrono::system_clock::now();
+        std::time_t curr_time = std::chrono::system_clock::to_time_t(now_timepoint);
+        out << "$date" << std::endl;
+        out << "\t" << std::ctime(&curr_time) << std::endl;
+        out << "$end" << std::endl;
+    }
+
+    // Print the generator version
+    {
+        out << "$version" << std::endl;
+        out << "\t" << "Coco++: Execution-aware Masking Verifier v1.0" << std::endl;
+        out << "$end" << std::endl;
+    }
+
+    // Print the timescale
+    {
+        out << "$timescale" << std::endl;
+        out << "\t" << "1ps" << std::endl;
+        out << "$end" << std::endl;
+    }
+
+    out << "$scope module " << m_module_name << " $end" << std::endl;
+
+    // Get all named signals
+    std::unordered_map<signal_id_t, const std::string> signals_in_vcd;
+    for (auto& it : m_name_bits)
+    {
+        const std::string name = it.first;
+        const std::vector<signal_id_t> bits = it.second;
+        for (uint32_t pos = 0; pos < bits.size(); pos++)
+        {
+            const signal_id_t sig_id = bits[pos];
+            const std::string sig_str = vcd_identifier(sig_id);
+            signals_in_vcd.emplace(sig_id, sig_str);
+            const char* type = (m_sig_clock != signal_id_t::S_0 && sig_id == m_sig_clock) ? "wire 1" : "string 0";
+            out << "\t$var " << type << " " << sig_str << " " << name;
+            out << "[" << pos << "]" << " [0] $end" << std::endl;
+        }
+    }
+
+    if (m_sig_clock != signal_id_t::S_0)
+        signals_in_vcd.erase(m_sig_clock);
+
+    out << "$upscope $end" << std::endl;
+    out << "$enddefinitions $end" << std::endl;
+
+    if (m_trace.empty())
+    {
+        out.close();
+        return;
+    }
+
+    // Dump the first cycle
+    auto prev_ptr = m_trace.cbegin();
+    auto curr_ptr = m_trace.cbegin();
+    uint32_t curr_tick = 0;
+
+    while(curr_ptr != m_trace.end())
+    {
+        out << "#" << curr_tick << std::endl;
+        if (curr_tick == 0) out << "$dumpvars" << std::endl;
+
+        const SimulatorValueMap& curr_map = *curr_ptr;
+        const SimulatorValueMap& prev_map = *prev_ptr;
+
+        if (m_sig_clock != signal_id_t::S_0)
+            { out << "b1 " << vcd_identifier(m_sig_clock) << std::endl; }
+
+        for (auto it: signals_in_vcd)
+        {
+            auto curr_find_it = curr_map.find(it.first);
+            auto prev_find_it = prev_map.find(it.first);
+
+            if (curr_tick == 0)
+            {
+                if (curr_find_it != curr_map.end())
+                    { out << "s" << curr_find_it->second << " " << it.second << std::endl; }
+                else
+                    { out << "bx " << it.second << std::endl; }
+
+            }
+            else if (curr_find_it != curr_map.end())
+            {
+                if (prev_find_it == prev_map.end() || curr_find_it->second != prev_find_it->second)
+                    { out << "s" << curr_find_it->second << " " << it.second << std::endl; }
+            }
+        }
+
+        if (curr_tick == 0) out << "$end" << std::endl;
+
+        if (m_sig_clock != signal_id_t::S_0)
+            { out << "#" << curr_tick + 500 << std::endl << "b0 " << vcd_identifier(m_sig_clock) << std::endl; }
+
+        curr_tick += 1000;
+        prev_ptr = curr_ptr;
+        curr_ptr++;
+    }
+
+    out << "#" << curr_tick << std::endl;
 }
 
 

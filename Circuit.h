@@ -21,6 +21,8 @@ protected:
     std::unordered_set<signal_id_t> m_signals;
     std::vector<const Cell*> m_cells;
     std::unordered_map<std::string, std::vector<signal_id_t>> m_name_bits;
+    std::string m_module_name;
+    signal_id_t m_sig_clock;
     template <typename T> signal_id_t get_signal_any(T& bit);
     Circuit(const Circuit& circ) = default;
 public:

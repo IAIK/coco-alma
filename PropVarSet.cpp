@@ -159,7 +159,7 @@ PropVarSetPtr operator&(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs
             solver->add_clause(-p, -a, b, v);
             solver->add_clause(-q, -b, p, v);
             solver->add_clause(-q, -b, a, v);
-
+            // TODO: Check if this is arc complete
             // Update the variable in the result
             a = v;
         }
@@ -236,6 +236,8 @@ PropVarSetPtr operator|(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs
             solver->add_clause(-p, -a,  v);
             solver->add_clause( p,  b, -v);
             solver->add_clause( p, -b,  v);
+            solver->add_clause( a,  b, -v);
+            solver->add_clause(-a, -b,  v);
 
             // Update the variable in the result
             a = v;
@@ -266,13 +268,26 @@ std::ostream& operator<<(std::ostream &stream, const PropVarSet& pvs)
     {
         const lidx_t label = var_it.first;
         const var_t solver_var = var_it.second;
-        if (!first) stream << ", ";
-        stream << label << ": ";
-        if (solver_var == ONE)
-            { stream << "T"; }
+
+        if (pvs.m_solver != nullptr && pvs.m_solver->state() == SatSolver::state_t::STATE_SAT)
+        {
+            if (solver_var == ONE || pvs.m_solver->value(solver_var))
+            {
+                if (!first) stream << ",";
+                stream << label;
+                first = false;
+            }
+        }
         else
-            { stream << solver_var; }
-        first = false;
+        {
+            if (!first) stream << ",";
+            stream << label << ":";
+            if (solver_var == ONE)
+                { stream << "T"; }
+            else
+                { stream << solver_var; }
+            first = false;
+        }
     }
     stream << "}";
     return stream;

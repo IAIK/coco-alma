@@ -16,6 +16,9 @@ constexpr const char* ILLEGAL_NAME_REDECLARATION = "Redeclaration of existing si
 constexpr const char* ILLEGAL_CELL_CYCLE         = "Cell definition produces cycle";
 constexpr const char* ILLEGAL_MISSING_SIGNALS    = "Found signals that are used but undefined";
 constexpr const char* ILLEGAL_CLOCK_EDGE         = "Found both posedge and negedge flip-flops";
+constexpr const char* ILLEGAL_CLOCK_SIGNAL       = "Found illegal clock signal";
+constexpr const char* ILLEGAL_MULTIPLE_CLOCKS    = "Found multiple clocks driving different registers";
+
 constexpr const char* ILLEGAL_SIGNAL_OVERWRITE   = "Overwriting value of signal during evaluation";
 constexpr const char* ILLEGAL_VALUE_NOT_CONST    = "Attempted getting constant from non-const value";
 constexpr const char* ILLEGAL_VALUE_NOT_SYMBOLIC = "Attempted getting pvs from non-pvs value";
@@ -24,6 +27,7 @@ constexpr const char* ILLEGAL_VALUE_NOT_SYMBOLIC = "Attempted getting pvs from n
 enum class signal_id_t : uint32_t {S_0 = 0, S_1 = 1, S_X = UINT32_MAX, S_Z = UINT32_MAX - 1};
 
 signal_id_t signal_from_str(const std::string& s);
+std::string vcd_identifier(signal_id_t sig);
 
 struct UnaryPorts
 {
@@ -124,9 +128,19 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
             { throw std::logic_error(ILLEGAL_SIGNAL_OVERWRITE); }
         assert(curr_signals.find(in_a) != curr_signals.end());
         const V& val_a = curr_signals.at(in_a);
-        V val_y = val_a;
-        if (is_out_negated(m_type)) val_y = !val_y;
-        curr_signals[out_y] = val_y;
+
+        auto prev_it_a = prev_signals.find(in_a);
+        auto prev_it_y = prev_signals.find(out_y);
+        if (prev_it_a != prev_signals.end() &&
+            prev_it_y != prev_signals.end() &&
+            val_a == prev_it_a->second)
+        { curr_signals[out_y] = prev_it_y->second; }
+        else
+        {
+            V val_y = val_a;
+            if (is_out_negated(m_type)) val_y = !val_y;
+            curr_signals[out_y] = val_y;
+        }
     }
     else if (is_binary(m_type))
     {
@@ -139,22 +153,34 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
 
         const V& val_a = curr_signals.at(in_a);
         V val_b = curr_signals.at(in_b);
-        V val_y;
 
-        if (is_second_negated(m_type)) val_b = !val_b;
+        auto prev_it_a = prev_signals.find(in_a);
+        auto prev_it_b = prev_signals.find(in_b);
+        auto prev_it_y = prev_signals.find(out_y);
 
-        if (gate_is_like_and(m_type))
-            { val_y = val_a & val_b; }
-        else if (gate_is_like_xor(m_type))
-            { val_y = val_a ^ val_b; }
+        if (prev_it_a != prev_signals.end() &&
+            prev_it_b != prev_signals.end() &&
+            prev_it_y != prev_signals.end() &&
+            val_a == prev_it_a->second && val_b == prev_it_b->second)
+        { curr_signals[out_y] = prev_it_y->second; }
         else
         {
-            assert(gate_is_like_or(m_type));
-            val_y = val_a | val_b;
-        }
+            V val_y;
+            if (is_second_negated(m_type)) val_b = !val_b;
 
-        if (is_out_negated(m_type)) val_y = !val_y;
-        curr_signals[out_y] = val_y;
+            if (gate_is_like_and(m_type))
+            { val_y = val_a & val_b; }
+            else if (gate_is_like_xor(m_type))
+            { val_y = val_a ^ val_b; }
+            else
+            {
+                assert(gate_is_like_or(m_type));
+                val_y = val_a | val_b;
+            }
+
+            if (is_out_negated(m_type)) val_y = !val_y;
+            curr_signals[out_y] = val_y;
+        }
     }
     else if (is_multiplexer(m_type))
     {
@@ -170,11 +196,27 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
         const V& val_b = curr_signals.at(in_b);
         const V& val_s = curr_signals.at(in_s);
 
-        // TODO: make a mux
-        V val_y = (!val_s & val_a) ^ (val_s & val_b);
+        auto prev_it_a = prev_signals.find(in_a);
+        auto prev_it_b = prev_signals.find(in_b);
+        auto prev_it_s = prev_signals.find(in_s);
+        auto prev_it_y = prev_signals.find(out_y);
 
-        if (is_out_negated(m_type)) val_y = !val_y;
-        curr_signals[out_y] = val_y;
+        if (prev_it_a != prev_signals.end() &&
+            prev_it_b != prev_signals.end() &&
+            prev_it_s != prev_signals.end() &&
+            prev_it_y != prev_signals.end() &&
+            val_a == prev_it_a->second &&
+            val_b == prev_it_b->second &&
+            val_s == prev_it_s->second)
+        { curr_signals[out_y] = prev_it_y->second; }
+        else
+        {
+            // TODO: make a mux
+            V val_y = (!val_s & val_a) ^ (val_s & val_b);
+
+            if (is_out_negated(m_type)) val_y = !val_y;
+            curr_signals[out_y] = val_y;
+        }
     }
     else
     {
