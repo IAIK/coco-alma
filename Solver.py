@@ -26,7 +26,7 @@ class Solver(Cadical):
                     for line in self.__dbg_comments[idx]:
                         print("c " + line)
             if self.store_clauses:
-                print(" ".join(self.__dbg_clauses[idx]) + " 0")
+                print(" ".join(map(str, self.__dbg_clauses[idx])) + " 0")
                 
     def dbg_print_cnf(self, name, assumes, positive, dbg_output_dir_path):
         assert(self.store_clauses)

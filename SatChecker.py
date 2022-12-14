@@ -417,7 +417,8 @@ class SatChecker(object):
             assert(False)
         res_vars = self.__make_mux_sel_not_stable(mode, mux_ins, curr_vars)
         if res_vars is None: return curr_vars[select]
-        return self.formula.make_simple(AND_TYPE, res_vars, curr_vars[select])
+        biased_sel = self.formula.assure_biased(curr_vars[select])
+        return self.formula.make_simple(XOR_TYPE, res_vars, biased_sel)
 
     def __build_node_stable(self, node_id, curr_vars, prev_vars):
         cell = self.circuit.cells[node_id]

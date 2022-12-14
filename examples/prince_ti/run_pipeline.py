@@ -67,6 +67,7 @@ python3 %s/verify.py
     --rst-name i_reset 
     --cycles 3 
     --mode transient 
+    --dbg-signals rnd_cnt subrnd_cnt
     --probing-model time-constrained 
     --num-leaks 1
 """ % (ALMA_DIR, TMP_DIR, TMP_DIR, PRINCE_DIR, "_secure" if SECURE else "")
