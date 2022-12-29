@@ -24,18 +24,23 @@ constexpr var_t ONE  = +INT32_MAX;
 
 /// Type for verification modes
 enum class verif_mode_t : uint8_t
-{ MODE_STABLE = 0x0, MODE_GLITCH = 0x1, MODE_HAMMING = 0x2, MODE_TRANSIENT = 0x3 };
+{ MODE_SYMBOLIC = 0x0, MODE_STABLE = 0x1, MODE_GLITCH = 0x3, MODE_HAMMING = 0x5,
+  MODE_TRANSIENT = 0x7 };
+
+/// Returns whether glitches are considered in the verification mode
+constexpr bool has_stable(verif_mode_t mode)
+{ return static_cast<uint8_t>(mode) & 0x1; }
 
 /// Returns whether glitches are considered in the verification mode
 constexpr bool has_glitches(verif_mode_t mode)
-{ return static_cast<uint8_t>(mode) & 0x1; }
+{ return static_cast<uint8_t>(mode) & 0x2; }
 
 /// Returns whether transitions are considered in the verification mode
 constexpr bool has_hamming(verif_mode_t mode)
-{ return static_cast<uint8_t>(mode) & 0x2; }
+{ return static_cast<uint8_t>(mode) & 0x4; }
 
 /// Simple implication utility function
 constexpr bool implies(const bool a, const bool b)
-{ return (~a || b); }
+{ return !a || b; }
 
 #endif // COMMON_H

@@ -116,6 +116,8 @@ public:
     void eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::unordered_map<signal_id_t, V>& curr_signals) const;
 };
 
+#define USE_MUX
+
 template <typename V, typename R>
 void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::unordered_map<signal_id_t, V>& curr_signals) const
 {
@@ -211,9 +213,11 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
         { curr_signals[out_y] = prev_it_y->second; }
         else
         {
-            // TODO: make a mux
-            V val_y = (!val_s & val_a) ^ (val_s & val_b);
-
+            #ifndef USE_MUX
+            V val_y = (!val_s & val_a) ^ (val_s & val_b); // plain variant
+            #else
+            V val_y = mux(val_s, val_b, val_a); // mux variant
+            #endif // USE_MUX
             if (is_out_negated(m_type)) val_y = !val_y;
             curr_signals[out_y] = val_y;
         }
@@ -229,9 +233,9 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
         if(curr_signals.find(out_q) != curr_signals.end())
         { throw std::logic_error(ILLEGAL_SIGNAL_OVERWRITE); }
 
-        const V& val_q = prev_signals.at(out_q);
+        const V& val_q = +prev_signals.at(out_q);
         // const V& val_c = curr_signals.at(in_c);
-        const V& val_d = prev_signals.at(in_d);
+        const V& val_d = +prev_signals.at(in_d);
 
         V val_non_reset_wb; // value written back in non-reset case
 
@@ -239,28 +243,34 @@ void Cell::eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::uno
         {
             bool e_only = test_is_reg_with_enable(m_type);
             const signal_id_t in_e = e_only ? m_ports.m_dffe.m_in_e : m_ports.m_dffer.m_in_e;
-            V val_e = prev_signals.at(in_e);
+            V val_e = +prev_signals.at(in_e);
             if (!dff_enable_trigger(m_type)) val_e = !val_e;
-            // TODO: make a mux
-            val_non_reset_wb = (val_e & val_d) ^ (!val_e & val_q);
+            #ifndef USE_MUX
+            val_non_reset_wb = (val_e & val_d) ^ (!val_e & val_q); // plain variant
+            #else
+            val_non_reset_wb = mux(val_e, val_d, val_q); // mux variant
+            #endif // USE_MUX
         }
         else
         {
             val_non_reset_wb = val_d;
         }
 
-        V val_fresh_q = prev_signals.at(out_q);
+        V val_fresh_q = +prev_signals.at(out_q);
         R val_res_q(val_fresh_q);
 
         if (dff_has_reset(m_type))
         {
             bool r_only = test_is_reg_with_reset(m_type);
             const signal_id_t in_r = r_only ? m_ports.m_dffr.m_in_r : m_ports.m_dffer.m_in_r;
-            V val_r = prev_signals.at(in_r);
+            V val_r = +prev_signals.at(in_r);
             if (!dff_reset_trigger(m_type)) val_r = !val_r;
             V val_reset_wb = V(dff_reset_value(m_type));
-            // TODO: Make a mux
-            val_res_q = (val_r & val_reset_wb) ^ (!val_r & val_non_reset_wb);
+            #ifndef USE_MUX
+            val_res_q = (val_r & val_reset_wb) ^ (!val_r & val_non_reset_wb); // plain variant
+            #else
+            val_res_q = mux(val_r, val_reset_wb, val_non_reset_wb); // mux variant
+            #endif // USE_MUX
         }
         else
         {

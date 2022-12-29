@@ -3,7 +3,7 @@
 #include "SatSolver.h"
 
 SatSolver::SatSolver() :
-        m_state(STATE_INPUT), m_num_vars(0), m_num_clauses(0), m_solver(ipasir_init())
+        m_state(STATE_INPUT), m_num_clauses(0), m_solver(ipasir_init())
 { }
 
 SatSolver::~SatSolver()
@@ -14,8 +14,13 @@ SatSolver::~SatSolver()
     ipasir_release(m_solver);
 }
 
-int SatSolver::make_xor(var_t a, var_t b)
+var_t SatSolver::make_xor(var_t a, var_t b)
 {
+    Assert(is_legal(a), ILLEGAL_LITERAL);
+    Assert(is_legal(b), ILLEGAL_LITERAL);
+    Assert(is_known(a), UNKNOWN_LITERAL);
+    Assert(is_known(b), UNKNOWN_LITERAL);
+
     // Standard rules for xor with constant
     if (a == ZERO) return b;
     if (b == ZERO) return a;
@@ -33,13 +38,11 @@ int SatSolver::make_xor(var_t a, var_t b)
     a = std::abs(a);
     b = std::abs(b);
 
-    #ifdef OPT_EXPR_CACHING
     // See if we already have a variable for this
     const gate_key_t key = make_key(a < b ? a : b, a < b ? b : a);
     auto res = m_xor_cache.find(key);
     if (res != m_xor_cache.end())
         return negate ? -(res->second) : res->second;
-    #endif
 
     var_t c = new_var();
     add_clause(-a, -b, -c);
@@ -48,45 +51,29 @@ int SatSolver::make_xor(var_t a, var_t b)
     add_clause(+a, -b, +c);
     m_state = STATE_INPUT;
 
-    #ifdef OPT_EXPR_CACHING
     // Register variable in the cache
     m_xor_cache.emplace(key, c);
     // Also register implied relations
     m_xor_cache.emplace(make_key(a, c), b);
     m_xor_cache.emplace(make_key(b, c), a);
-    #endif
 
     return negate ? -c : c;
 }
 
-int SatSolver::make_and(const var_t a, const var_t b)
+var_t SatSolver::make_and(const var_t a, const var_t b)
 {
-    // Standard rules for and with constant
-    if (a == ZERO || b == ZERO) return ZERO;
-    if (a == ONE) return b;
-    if (b == ONE) return a;
-    // Simplification rules for and
-    if (a == b) return a;
-    if (a == -b) return ZERO;
-
-    #ifdef OPT_EXPR_CACHING
-    // See if we already have a variable for this
-    const gate_key_t key = make_key(a < b ? a : b, a < b ? b : a);
-    auto res = m_and_cache.find(key);
-    if (res != m_and_cache.end()) return res->second;
-    #endif
+    var_t c = simplify_and(a, b);
+    if (c != 0) return c;
 
     // Add the clauses for constraining the variables
-    const var_t c = new_var();
+    c = new_var();
     add_clause(+a, -c);
     add_clause(+b, -c);
     add_clause(-a, -b, +c);
     m_state = STATE_INPUT;
 
-    #ifdef OPT_EXPR_CACHING
-    // Register variable in the cache
-    m_and_cache.emplace(key, c);
-    #endif
+    const gate_key_t key = make_key(a < b ? a : b, a < b ? b : a);
+    register_and(key, c);
     return c;
 }
 

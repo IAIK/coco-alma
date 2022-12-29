@@ -263,7 +263,7 @@ PropVarSetPtr operator|(const PropVarSetPtr& p_pvs_a, const PropVarSetPtr& p_pvs
 std::ostream& operator<<(std::ostream &stream, const PropVarSet& pvs)
 {
     stream << "{";
-    bool first = true;
+    uint32_t count = 0;
     for (const auto& var_it : pvs.m_vars)
     {
         const lidx_t label = var_it.first;
@@ -273,21 +273,24 @@ std::ostream& operator<<(std::ostream &stream, const PropVarSet& pvs)
         {
             if (solver_var == ONE || pvs.m_solver->value(solver_var))
             {
-                if (!first) stream << ",";
+                if (count != 0) stream << ",";
+                if (count != 0 && count % 10 == 0) stream << "\\012";
                 stream << label;
-                first = false;
+
             }
         }
         else
         {
-            if (!first) stream << ",";
+            if (count != 0) stream << ",";
+            if (count != 0 && count % 10 == 0) stream << "\\012";
             stream << label << ":";
             if (solver_var == ONE)
                 { stream << "T"; }
             else
                 { stream << solver_var; }
-            first = false;
         }
+
+        count += 1;
     }
     stream << "}";
     return stream;

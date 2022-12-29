@@ -45,12 +45,14 @@ void show_value(Simulator<mode>& sim, const std::string& name)
 
 int main()
 {
-    constexpr verif_mode_t mode = verif_mode_t::MODE_STABLE;
+    constexpr verif_mode_t mode = verif_mode_t::MODE_GLITCH;
     using Simulator = Simulator<mode>;
     using Value = Value<mode>;
 
     Circuit circ("/home/vhadzic/Work/coco-alma/tmp/circuit.json", "top_module_d11");
     Simulator sim(circ);
+
+    uint32_t num_masks = 0;
 
     sim.allocate_secrets({191, 0}, 2);
 
@@ -60,11 +62,9 @@ int main()
     sim.step();
     sim.prepare_cycle();
 
-    sim.allocate_masks({47, 0});
     sim["i_reset"][0] = 0;
 
     sim["i_enc_dec"][0] = 0;
-    sim["i_r"][{47, 0}] = sim.masks({47, 0});
 
     // sim["i_pt1"] = 0xf2ab9aeb45079458LU;
     // sim["i_pt2"] = 0xf2ab9aeb45079458LU;
@@ -91,6 +91,9 @@ int main()
     sim.prepare_cycle();
     sim["i_load"] = 0;
     sim["i_start"] = 1;
+    sim.allocate_masks({num_masks + 47, num_masks});
+    sim["i_r"][{47, 0}] = sim.masks({num_masks + 47, num_masks});
+    num_masks += 48;
     sim.step_cycle();
 
     uint32_t cycles = 0;
@@ -103,16 +106,30 @@ int main()
         show_value(sim, "next_state");
         show_value(sim, "state");
         show_value(sim, "sel4");
+        show_value(sim, "subrnd_cnt");
         show_value(sim, "rnd_cnt");
-        sim.step();
+
+        sim.prepare_cycle();
+        sim.allocate_masks({num_masks + 47, num_masks});
+        sim["i_r"][{47, 0}] = sim.masks({num_masks + 47, num_masks});
+        num_masks += 48;
+        sim.step_cycle();
+
         cycles += 1;
         std::cout << cycles << std::endl;
-        if (cycles == 4) break;
+        if (cycles == 5) break;
     }
 
-    // sim.step();
+    show_value(sim, "i_reset");
+    show_value(sim, "i_load");
+    show_value(sim, "i_start");
+    show_value(sim, "next_state");
+    show_value(sim, "state");
+    show_value(sim, "sel4");
+    show_value(sim, "subrnd_cnt");
+    show_value(sim, "rnd_cnt");
 
-    sim.m_solver.check();
+    // sim.m_solver.check();
     sim.dump_vcd("/tmp/tmp.vcd");
 
     return 0;
