@@ -25,7 +25,9 @@ void show_value(Simulator<mode>& sim, const std::string& name, uint64_t up, uint
         const int print_size = block_size / 4 + (block_size % 4 != 0);
         uint64_t val = 0;
         for (uint64_t i = 0; i < block_size; i++)
-        { val |= (uint64_t)((x[offset + i].get()).stable_val() & 1) << i; }
+        {
+            val |= (uint64_t)((x[offset + i].get()).const_val()) << i;
+        }
         std::cout << std::setw(print_size);
         std::cout << val;
 
@@ -43,9 +45,11 @@ void show_value(Simulator<mode>& sim, const std::string& name)
     show_value(sim, name, x.size() - 1, 0);
 }
 
+int MUX_COUNT = 0;
+
 int main()
 {
-    constexpr verif_mode_t mode = verif_mode_t::MODE_GLITCH;
+    constexpr verif_mode_t mode = verif_mode_t::MODE_STABLE;
     using Simulator = Simulator<mode>;
     using Value = Value<mode>;
 
@@ -57,14 +61,14 @@ int main()
     sim.allocate_secrets({191, 0}, 2);
 
     sim.prepare_cycle();
-    sim["i_reset"][0] = 1;
+    sim["i_reset"][0] = true;
     sim.step_cycle();
     sim.step();
     sim.prepare_cycle();
 
-    sim["i_reset"][0] = 0;
+    sim["i_reset"][0] = false;
 
-    sim["i_enc_dec"][0] = 0;
+    sim["i_enc_dec"][0] = false;
 
     // sim["i_pt1"] = 0xf2ab9aeb45079458LU;
     // sim["i_pt2"] = 0xf2ab9aeb45079458LU;
@@ -98,7 +102,7 @@ int main()
 
     uint32_t cycles = 0;
 
-    while ((sim["o_done"][0].get()).stable_val() != true)
+    while ((sim["o_done"][0].get()).const_val() != true)
     {
         show_value(sim, "i_reset");
         show_value(sim, "i_load");
@@ -131,6 +135,8 @@ int main()
 
     // sim.m_solver.check();
     sim.dump_vcd("/tmp/tmp.vcd");
+
+    std::cout << "Found " << MUX_COUNT << "complex mux computations." << std::endl;
 
     return 0;
 }

@@ -3,8 +3,8 @@ project(coco-cpp)
 enable_testing()
 
 set(CMAKE_CXX_STANDARD 17)
-set(COCO_SOURCES coco.cpp VarManager.cpp SatSolver.cpp SymbolManager.cpp PropVarSet.cpp Cell.cpp Circuit.cpp Value.cpp Simulator.hpp)
-set(COCO_HEADERS coco.cpp VarManager.h SatSolver.h SymbolManager.h PropVarSet.h cell_types.h Circuit.h Value.h Value.hpp Simulator.h NoPVS.h)
+set(COCO_SOURCES coco.cpp VarManager.cpp SatSolver.cpp Symbol.cpp SymbolManager.cpp PropVarSet.cpp Cell.cpp Circuit.cpp Value.cpp Simulator.hpp)
+set(COCO_HEADERS coco.cpp VarManager.h SatSolver.h Symbol.h SymbolManager.h PropVarSet.h cell_types.h Circuit.h Value.h Value.hpp ValueView.h Simulator.h NoPVS.h)
 
 add_executable(coco-cpp ${COCO_SOURCES})
 

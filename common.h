@@ -22,6 +22,9 @@ inline bool is_legal(var_t x) { return (-x != x); }
 constexpr var_t ZERO = -INT32_MAX;
 constexpr var_t ONE  = +INT32_MAX;
 
+constexpr var_t to_var(bool val) { return val ? ONE : ZERO; }
+constexpr bool is_const(var_t x) { return std::abs(x) == ONE; }
+
 /// Type for verification modes
 enum class verif_mode_t : uint8_t
 { MODE_SYMBOLIC = 0x0, MODE_STABLE = 0x1, MODE_GLITCH = 0x3, MODE_HAMMING = 0x5,

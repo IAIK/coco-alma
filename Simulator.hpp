@@ -1,6 +1,7 @@
 #ifdef SIMULATOR_H
 
 #include "Simulator.h"
+#include "Symbol.h"
 
 
 template <verif_mode_t mode>
@@ -87,14 +88,16 @@ void Simulator<mode>::allocate_secrets(const Range range, const size_t num_share
         std::cout << secret_idx << std::endl;
         {  // Create a local scope here since the value should be inaccessible later
             PropVarSetPtr p_pvs = std::make_shared<PropVarSet>(&m_solver, secret_idx);
-            value_vector.emplace_back(p_pvs);
+            Symbol sym = create_symbol();
+            value_vector.emplace_back(sym, p_pvs);
         }
         for (size_t sh = 1; sh < num_shares; sh++)
         {
             lidx_t mask_idx = new_mask_lidx();
             PropVarSetPtr p_pvs = std::make_shared<PropVarSet>(&m_solver, mask_idx);
+            Symbol sym = create_symbol();
             std::cout << *p_pvs << std::endl;
-            Value<mode> val(p_pvs);
+            Value<mode> val(sym, p_pvs);
             value_vector.back() = value_vector.back() ^ val;
             value_vector.push_back(val);
         }
@@ -114,7 +117,8 @@ void Simulator<mode>::allocate_masks(Range range)
 
         lidx_t mask_idx = new_mask_lidx();
         PropVarSetPtr p_pvs = std::make_shared<PropVarSet>(&m_solver, mask_idx);
-        m_masks.emplace(std::piecewise_construct, std::forward_as_tuple(i), std::forward_as_tuple(p_pvs));
+        Symbol sym = create_symbol();
+        m_masks.emplace(std::piecewise_construct, std::forward_as_tuple(i), std::forward_as_tuple(sym, p_pvs));
     }
 }
 
@@ -274,7 +278,7 @@ void Simulator<mode>::dump_vcd(const std::string& file_name)
             out << "b1 " << scope_types[1][0] << vcd_identifier(m_sig_clock) << std::endl;
         }
 
-        for (int scope_id = 0; scope_id < 2; scope_id++)
+        for (int scope_id = 0; scope_id < 1 + has_glitches(mode); scope_id++)
         {
             const char* scope_type = scope_types[scope_id];
             Value<mode>::s_display = display_types[scope_id];

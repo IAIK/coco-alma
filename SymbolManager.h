@@ -16,5 +16,4 @@ public:
     var_t make_mux(var_t s, var_t t, var_t e);
 };
 
-
 #endif // SYMBOLMANAGER_H

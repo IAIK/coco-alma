@@ -5,6 +5,7 @@
 #include <utility>
 #include "Circuit.h"
 #include "Value.h"
+#include "ValueView.h"
 #include "SatSolver.h"
 #include "SymbolManager.h"
 
@@ -17,7 +18,6 @@ class Simulator : protected Circuit
 {
 public:
     SatSolver m_solver; // TODO: make this private
-    SymbolManager m_symbols;
 private:
     bool m_prepared;
     using SimulatorValueMap = std::unordered_map<signal_id_t, Value<mode>>;
