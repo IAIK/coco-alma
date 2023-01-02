@@ -305,7 +305,7 @@ Value<mode> operator|(const Value<mode>& a, const Value<mode>& b)
     return !(!a & !b);
 }
 
-extern int MUX_COUNT;
+//TODO: remove extern int MUX_COUNT;
 
 template<verif_mode_t mode>
 Value<mode> mux(const Value<mode>& cond, const Value<mode>& t_val, const Value<mode>& e_val)
@@ -364,7 +364,7 @@ Value<mode> mux(const Value<mode>& cond, const Value<mode>& t_val, const Value<m
             {
                 // Both then and else are symbolic, create multiplexer pvs
                 result.m_stable_pvs = +cond.m_stable_pvs ^ (t_val.m_stable_pvs | e_val.m_stable_pvs);
-                MUX_COUNT += 1;
+                //TODO: remove MUX_COUNT += 1;
                 std::cout << "here! 1" << std::endl;
                 assert(!result.is_stable_const());
             }
@@ -447,7 +447,7 @@ Value<mode> mux(const Value<mode>& cond, const Value<mode>& t_val, const Value<m
             {
                 // Both then and else are symbolic, create multiplexer pvs
                 result.m_glitch_pvs = +cond.m_glitch_pvs ^ (t_val.m_glitch_pvs | e_val.m_glitch_pvs);
-                MUX_COUNT += 1;
+                //TODO: remove MUX_COUNT += 1;
                 std::cout << "here! 2" << std::endl;
                 assert(!result.is_glitch_const());
                 assert(result.m_stability == false);

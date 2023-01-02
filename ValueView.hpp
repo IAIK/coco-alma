@@ -132,7 +132,7 @@ uint64_t ValueViewVector<mode>::as_uint64_t()
 
     uint64_t res = 0;
     for (uint32_t i = 0; i < size() && i < 64; i++)
-    { res |= ((uint64_t)m_views[i].get().stable_val()) << i; }
+    { res |= ((uint64_t)m_views[i].get().const_val()) << i; }
     return res;
 }
 

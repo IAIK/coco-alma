@@ -116,6 +116,8 @@ public:
     void eval(const std::unordered_map<signal_id_t, V>& prev_signals, std::unordered_map<signal_id_t, V>& curr_signals) const;
 };
 
+extern bool mux(bool cond, bool t_val, bool e_val);
+
 #define USE_MUX
 
 template <typename V, typename R>

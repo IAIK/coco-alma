@@ -8,7 +8,7 @@
 do {                                    \
     bool caught = false;                \
     try { X; }                          \
-    catch (const SatSolverException& e) \
+    catch (const std::logic_error& e)   \
     {                                   \
         std::cout << e.what()           \
             << std::endl;               \

@@ -4,7 +4,7 @@ include(CTest)
 
 ###### Unit test suite for the SatSolver class ######
 
-set(UNIT_SOLVER_SRC ../SatSolver.cpp unit-solver.cpp)
+set(UNIT_SOLVER_SRC ../SatSolver.cpp ../VarManager.cpp unit-solver.cpp)
 add_executable(unit-solver ${UNIT_SOLVER_SRC})
 target_include_directories(unit-solver PUBLIC "${PROJECT_SOURCE_DIR}")
 target_link_libraries(unit-solver ${SOLVER_LIB_NAME})
@@ -28,7 +28,7 @@ endforeach()
 
 ###### Unit test suite for the PropVarSet class ######
 
-set(UNIT_PVS_SRC ../PropVarSet.cpp ../SatSolver.cpp unit-pvs.cpp)
+set(UNIT_PVS_SRC ../PropVarSet.cpp ../SatSolver.cpp ../VarManager.cpp unit-pvs.cpp)
 add_executable(unit-pvs ${UNIT_PVS_SRC})
 target_include_directories(unit-pvs PUBLIC "${PROJECT_SOURCE_DIR}")
 target_link_libraries(unit-pvs ${SOLVER_LIB_NAME})
@@ -111,7 +111,7 @@ endforeach()
 
 ###### Unit test suite for the Simulator class using small verilog designs ######
 
-set(UNIT_SIM_GADGETS_SRC ../Simulator.cpp ../Circuit.cpp ../Cell.cpp ../SatSolver.cpp ../Value.cpp ../PropVarSet.cpp unit-sim-gadgets.cpp)
+set(UNIT_SIM_GADGETS_SRC ../Simulator.hpp ../Circuit.cpp ../Cell.cpp ../SatSolver.cpp ../VarManager.cpp ../Value.cpp ../Symbol.cpp ../SymbolManager.cpp ../PropVarSet.cpp unit-sim-gadgets.cpp)
 add_executable(unit-sim-gadgets ${UNIT_SIM_GADGETS_SRC})
 target_include_directories(unit-sim-gadgets PUBLIC "${PROJECT_SOURCE_DIR}")
 target_include_directories(unit-sim-gadgets PUBLIC "${PROJECT_SOURCE_DIR}/json/single_include/nlohmann")
@@ -141,4 +141,25 @@ foreach(TEST_VAR ${UNIT_SIM_GADGET_TESTS})
     add_test(NAME unit-sim-gadgets:${TEST_STR}
       COMMAND unit-sim-gadgets ${TEST_ARGS}
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/test")
+endforeach()
+
+###### Unit test suite for the Value class ######
+
+set(UNIT_VALUE_SRC ../Value.cpp ../Symbol.cpp ../SymbolManager.cpp ../PropVarSet.cpp ../SatSolver.cpp  ../VarManager.cpp unit-value.cpp)
+add_executable(unit-value ${UNIT_VALUE_SRC})
+target_include_directories(unit-value PUBLIC "${PROJECT_SOURCE_DIR}")
+target_link_libraries(unit-value ${SOLVER_LIB_NAME})
+
+set(UNIT_VALUE_TESTS
+  test_constructor
+  test_stable_xor
+  test_glitch_xor
+#  test_ptr_plus_bias
+#  test_ptr_and
+  )
+
+foreach(TEST_NAME ${UNIT_VALUE_TESTS})
+    add_test(NAME unit-value:${TEST_NAME}
+      COMMAND unit-value ${TEST_NAME}
+      WORKING_DIRECTORY .)
 endforeach()

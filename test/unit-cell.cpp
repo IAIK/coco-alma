@@ -3,6 +3,11 @@
 #include <unordered_map>
 #include <iostream>
 
+bool mux(bool cond, bool t_val, bool e_val)
+{
+    return cond ? t_val : e_val;
+}
+
 #define ignored __attribute__((unused))
 
 bool and_gate(bool a, bool b, ignored bool s = false) { return a & b; }
