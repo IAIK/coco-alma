@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include <string>
+#include <stdexcept>
 #include "cell_types.h"
 #include <unordered_map>
 #include <iostream>

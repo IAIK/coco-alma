@@ -9,6 +9,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
+#include <stdexcept>
 
 #include "Cell.h"
 
