@@ -314,6 +314,7 @@ class SatChecker(object):
         self.rst_name = args.rst_name
         self.rst_cycles = args.rst_cycles
         self.rst_phase = args.rst_phase
+        self.init_delay = args.init_delay
         self.num_leaks = args.num_leaks
         self.minimize_leaks = args.minimize_leaks
         self.dbg_output_dir_path = args.dbg_output_dir_path
@@ -592,6 +593,12 @@ class SatChecker(object):
         assert (len(self.formula.node_vars_stable) == 0)
         assert (len(self.formula.node_vars_trans) == 0)
 
+    def __wait_init_delay(self):
+        if self.init_delay > 0:
+            print("Waiting for initial delay cycles: ", self.init_delay)
+        for i in range(self.init_delay):
+            self.trace.parse_next_cycle()
+
     def __build_hamming(self):
         prev_stable = self.formula.node_vars_stable[-2]
         curr_stable = self.formula.node_vars_stable[-1]
@@ -643,6 +650,8 @@ class SatChecker(object):
 
     def __build_formula(self):
         self.__find_reset(self.rst_phase)
+        self.__wait_init_delay()
+
         cycle = 0
         inactive_val = str((self.rst_phase == "0") & 1)
 
@@ -979,6 +988,8 @@ class SatChecker(object):
     def __check_secure_time_constrained(self):
         leaks = []
         self.__find_reset(self.rst_phase)
+        self.__wait_init_delay()
+
         cycle = 0
         inactive_val = str((self.rst_phase == "0") & 1)
 
