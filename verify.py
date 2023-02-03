@@ -72,6 +72,9 @@ def parse_arguments():
     parser.add_argument("-p", "--rst-phase", dest="rst_phase",
                         required=False, default="1", choices=BIN_STR,
                         help="Phase of the reset signal that triggers the reset (default: %(default)s)")
+    parser.add_argument("-i", "--init-delay", dest="init_delay",
+                        required=False, default=0, type=helpers.ap_check_positive,
+                        help="Number of initial delay cycles after reset (default: %(default)s)")
     parser.add_argument("-d", "--dbg-output-dir", dest="dbg_output_dir_path",
                         required=False, default=TMP_DIR,
                         help="Directory in which debug traces (dbg-label-trace-?.txt, dbg-circuit-?.dot) "
