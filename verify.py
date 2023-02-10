@@ -86,6 +86,10 @@ def parse_arguments():
                         required=False, default=[], nargs="+", type=str,
                         help="Cells whose names contain these strings (and their logic cone) to be "
                              "are forced to be stable and then ignored during checks")
+    parser.add_argument("-es", "--excluded-signals", dest="excluded",
+                        required=False, default=[], nargs="+", type=str,
+                        help="Cells whose names contain these strings are forced not to propagate "
+                             "secret labels")
     parser.add_argument("-hd", "--include-hamming", action="store_true", dest="hamming",
                         help="Include transition leakage in stable mode")
     parser.set_defaults(hamming=False)
@@ -192,6 +196,20 @@ def generate_ignored(circuit, json_module, ignored_strings):
     return ignored
 
 
+def generate_excluded(circuit, json_module, excluded_strings):
+    excluded = set()
+    for fs in excluded_strings:
+        fs_arr = fs.replace(']', '[').split('[')
+        fs_name = fs_arr[0]
+        fs_bit = int(fs_arr[1])
+        for node_id in circuit.nodes:
+            if(fs_name == circuit.cells[node_id].name) & (fs_bit == circuit.cells[node_id].pos):
+                excluded.add(node_id)
+                print("excluded signal:", fs, ", node_id:", node_id)
+
+    return excluded
+
+
 def vcd_json_sanity_check(trace, circuit_graph, rst_name):
     assert(rst_name in trace.name_to_id), "Reset signal %s not recognized." % (rst_name)
     for node in circuit_graph.nodes():
@@ -237,8 +255,9 @@ def main():
     module = circuit_json["modules"][args.top_module]
     label_dict = generate_labeling(args.label_file_path, module)
     ignored_set = generate_ignored(safe_graph, module, args.ignored)
+    excluded_set = generate_excluded(safe_graph, module, args.excluded)
     trace = VCDStorage(args.vcd_file_path)
-    checker = SatChecker(label_dict, ignored_set, trace, safe_graph, args)
+    checker = SatChecker(label_dict, ignored_set, excluded_set, trace, safe_graph, args)
 
     status, locations = checker.check()
     leaks = [l[1] for l in locations]

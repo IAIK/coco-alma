@@ -295,7 +295,7 @@ class Formula:
 
 
 class SatChecker(object):
-    def __init__(self, labels, ignored, trace, safe_graph, args):
+    def __init__(self, labels, ignored, excluded, trace, safe_graph, args):
         assert(args.mode in (TRANSIENT, STABLE))
 
         self.circuit = safe_graph
@@ -330,6 +330,7 @@ class SatChecker(object):
         self.pretty_names = []
         self.debugs = set(args.debugs)
         self.ignored = ignored
+        self.excluded = excluded
         self.dbg_exact_formula = args.dbg_exact_formula
         self.checking_mode = args.checking_mode
         self.__extract_label_info(labels)
@@ -446,6 +447,12 @@ class SatChecker(object):
 
         for node_id in self.circuit.nodes:
             nvars = self.__build_node_stable(node_id, curr_vars, prev_vars)
+            if (nvars is not None):
+                if(node_id in self.excluded):
+                    cell = self.circuit.cells[node_id]
+                    cell_name = "%s[%s]" % (cell.name, cell.pos)
+                    print("Stopping secret label propagation through:", cell_name)
+                    continue
             if nvars is not None: curr_vars[node_id] = nvars
         pass
 
@@ -543,6 +550,12 @@ class SatChecker(object):
             elif cell.type == MUX_TYPE:
                 sel_stable = (cell.select not in all_stable_nodes) and stability[cell.select]
                 nvars = self.__proc_mux(TRANSIENT, cell.select, cell.mux_ins, curr_vars, sel_stable)
+
+            if (nvars is not None):
+                if(node_id in self.excluded):
+                    cell_name = "%s[%s]" % (cell.name, cell.pos)
+                    print("Stopping secret label propagation through:", cell_name)
+                    continue
 
             if nvars is not None: curr_vars[node_id] = nvars
 
