@@ -13,6 +13,7 @@ SECURE_MEM = None
 MEM_WIDTH = 1
 MEM_MODULE = None
 INSTR_LIMIT = None
+TOP_MODULE = None
 
 def check_file_exists(file_path):
     if file_path == None: return None
@@ -42,7 +43,7 @@ check_file_exists(ASM_CMD[0])
 check_file_exists(OBJDUMP_CMD[0])
 
 def parse_arguments():
-    global SECURE_MEM, MEM_WIDTH, MEM_MODULE, INSTR_LIMIT
+    global SECURE_MEM, MEM_WIDTH, MEM_MODULE, INSTR_LIMIT, TOP_MODULE
     parser = argparse.ArgumentParser(description="Assemble.py for ibex")
     parser.add_argument("--program", dest="program_path", required=True)
     parser.add_argument('--init-file', dest='init_file_path', required=False, default=None)
@@ -57,6 +58,12 @@ def parse_arguments():
     
     with open(args.netlist_path, "r") as f:
         verilog_txt = f.read()
+        mod = re.compile("module (\S+)\(")
+        res = mod.search(verilog_txt)
+        if res is None:
+            print("Could not find top module, aborting")
+            sys.exit(-1)
+        TOP_MODULE = res.group(1)
         SECURE_MEM = "instr_rom" in verilog_txt
         MEM_WIDTH = 4 if SECURE_MEM else 1
         MEM_MODULE = "instr_rom" if SECURE_MEM else "u_ram"
@@ -96,7 +103,7 @@ def create_raminit_header(args):
 
     for i in range(0, len(code), MEM_WIDTH):
         x = "0x" + ba.hexlify(code[i:i+MEM_WIDTH][::-1]).decode("ascii")
-        header.write(f"  tb->m_core->ibex_top__DOT__{MEM_MODULE}{mgl('.')}"
+        header.write(f"  tb->m_core->{TOP_MODULE}__DOT__{MEM_MODULE}{mgl('.')}"
                      f"mem{mgl('[')}{i // MEM_WIDTH}{mgl(']')} = {x};\n")
     
     # parse data init file with format addr/reg ; value    
@@ -111,11 +118,11 @@ def create_raminit_header(args):
     
     for m in mem:
         addr, val = int(m[0], 0) // MEM_WIDTH, m[1]
-        header.write(f"  tb->m_core->ibex_top__DOT__u_ram{mgl('.')}mem{mgl('[')}{addr}{mgl(']')} = {val};\n")
+        header.write(f"  tb->m_core->{TOP_MODULE}__DOT__u_ram{mgl('.')}mem{mgl('[')}{addr}{mgl(']')} = {val};\n")
     header.write("  tb->reset();\n")
     for r in reg:
         addr, val = r[0][1:], r[1]
-        header.write(f"  tb->m_core->ibex_top__DOT__u_core{mgl('.')}register_file_i{mgl('.')}"
+        header.write(f"  tb->m_core->{TOP_MODULE}__DOT__u_core{mgl('.')}register_file_i{mgl('.')}"
                      f"rf_reg_tmp{mgl('[')}{addr}{mgl(']')} = {val};\n")
         
     header.write("}\n")

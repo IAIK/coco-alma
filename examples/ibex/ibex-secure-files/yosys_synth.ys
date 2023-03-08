@@ -1,0 +1,16 @@
+read_verilog /home/vhadzic/Work/coco-ibex/rtl/secure.sv;
+read_verilog /home/vhadzic/Work/coco-ibex/shared/rtl/ibex_top.v;
+read_verilog /home/vhadzic/Work/coco-ibex/syn/syn_out/ibex_30_11_2020_23_49_53/generated/ibex_core_netlist.v;
+
+
+setattr -set keep 1 n:\*;
+synth -flatten -noabc -top ibex_top;
+techmap; dffunmap; opt_expr; opt_clean;
+rename -enumerate *; clean;
+write_verilog -noattr /home/vhadzic/Work/coco-alma/tmp/circuit.v;
+
+# design -reset; design -reset-vlog;
+# read_verilog /home/vhadzic/Work/coco-alma/tmp/circuit.v;
+# setattr -set keep 1 n:\*;
+# proc; techmap; dffunmap; clean;
+write_json /home/vhadzic/Work/coco-alma/tmp/circuit.json;

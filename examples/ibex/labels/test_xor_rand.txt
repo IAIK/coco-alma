@@ -1,0 +1,4 @@
+# registers:
+u_core.register_file_i.rf_reg_reg[32]  = secret 0
+u_core.register_file_i.rf_reg_reg[288] = static_random
+u_core.register_file_i.rf_reg_reg[544] = secret 0
