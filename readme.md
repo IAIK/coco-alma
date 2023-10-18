@@ -77,6 +77,7 @@ python3 parse.py
 The arguments for the standard mode of operation are:
   * `--source`: file path(s) to the source file(s). `parse.py` will automatically generate a Yosys synthesis script. Then, the `--synthesis-file` option must not be used.
   * `--synthesis-file`: In case one does not want to use the auto-generated script, this option can be used to specify a custom Yosys synthesis script. Then, the `--source` option must not be used because the script already includes the paths of the sources.
+  * `--synthesis-template`: an optional template yosys synthesis script that is used for patching instead of default `template/yosys_synth_template.txt`. The `--source` option can be used with this argument. The difference between `--synthesis-file` and `--synthesis-template` is that the former is directly passed to yosys, while the latter is patched with the source files passed with `--source`. 
   * `--top-module`: the name of the top module
   
 Optional arguments include:
