@@ -103,7 +103,7 @@ def create_raminit_header(args):
 
     for i in range(0, len(code), MEM_WIDTH):
         x = "0x" + ba.hexlify(code[i:i+MEM_WIDTH][::-1]).decode("ascii")
-        header.write(f"  tb->m_core->{TOP_MODULE}__DOT__{MEM_MODULE}{mgl('.')}"
+        header.write(f"  tb->m_core->rootp->{TOP_MODULE}__DOT__{MEM_MODULE}{mgl('.')}"
                      f"mem{mgl('[')}{i // MEM_WIDTH}{mgl(']')} = {x};\n")
     
     # parse data init file with format addr/reg ; value    
