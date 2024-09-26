@@ -237,6 +237,16 @@ def main():
     module = circuit_json["modules"][args.top_module]
     label_dict = generate_labeling(args.label_file_path, module)
     ignored_set = generate_ignored(safe_graph, module, args.ignored)
+    
+    # find out how many cycles there really are
+    dummy_trace = VCDStorage(args.vcd_file_path)
+    while dummy_trace.parse_next_cycle():
+        pass
+    cycles_upper_bound = (dummy_trace.cycle) - args.rst_cycles
+    if args.cycles > cycles_upper_bound:
+        print("Setting number of cycles to %d." % cycles_upper_bound)
+        args.cycles = cycles_upper_bound
+    del dummy_trace
     trace = VCDStorage(args.vcd_file_path)
     checker = SatChecker(label_dict, ignored_set, trace, safe_graph, args)
 
