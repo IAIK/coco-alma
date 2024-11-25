@@ -42,6 +42,11 @@ def parse_arguments():
                         help="Name of the top module")
 
     # Optional arguments
+    # Allow the caller to bring their own synthesis template
+    parser.add_argument("-st", "--synthesis-template", dest="synthesis_template_path",
+                        default=TEMPLATE_FILE_PATH,
+                        type=helpers.ap_check_file_exists,
+                        help="Path of the template yosys synthesis script")
     parser.add_argument("-l", "--label", dest="label_file_path",
                         required=False, default=LABEL_FILE_PATH, type=helpers.ap_check_dir_exists,
                         help="Path of output label file (default: %(default)s)")
@@ -78,7 +83,7 @@ def parse_arguments():
 
 def create_yosys_script(args):
     yosys_script = ""
-    with open(TEMPLATE_FILE_PATH) as template_file:
+    with open(args.synthesis_template_path) as template_file:
         yosys_script += template_file.read()
     assert("{READ_FILES}" in yosys_script)
     read_verilog_commands = "\n".join(["read_verilog %s;" % os.path.abspath(f) for f in args.verilog_file_paths]) + "\n"
@@ -109,6 +114,9 @@ def yosys_synth(args):
         if args.synthesis_file_path:
             print("Using custom yosys synthesis script: %s" % args.synthesis_file_path)
             yosys_synth_file_path = args.synthesis_file_path
+        elif args.synthesis_template_path:
+            print("Using custom yosys template synthesis script: %s" % args.synthesis_template_path)
+            yosys_synth_file_path = SYNTH_FILE_PATH
         else:
             yosys_synth_file_path = SYNTH_FILE_PATH
         
